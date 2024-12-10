@@ -235,3 +235,22 @@ src/main/generated/*
 
 # Local development configuration
 application-dev.yml
+
+# Gradle
+.gradle/
+.gradle/*
+.gradle/*/
+.gradle/8.5/*
+.gradle/buildOutputCleanup/*
+.gradle/file-system.probe
+.gradle/executionHistory/*
+.gradle/vcs-1/*
+
+# IntelliJ specific
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/material_theme_project_new.xml
