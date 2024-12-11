@@ -48,8 +48,8 @@ class DefaultFortuneProviderTest {
 
     }
 
-    @Test
     @DisplayName("영어 로케일로 포춘 메시지를 정상적으로 가져온다")
+    @Test
     void getFortuneWithEnglishLocale() {
         // given
         Locale englishLocale = Locale.ENGLISH;
@@ -65,8 +65,8 @@ class DefaultFortuneProviderTest {
         verify(messageSource).getMessage(startsWith("fortune."), any(), eq(englishLocale));
     }
 
-    @Test
     @DisplayName("메시지가 없을 경우 기본 메시지를 반환한다")
+    @Test
     void getFortuneWithDefaultMessage() {
         // given
         Locale locale = Locale.getDefault();
@@ -82,8 +82,8 @@ class DefaultFortuneProviderTest {
         verify(messageSource).getMessage(startsWith("fortune."), any(), eq(locale));
     }
 
-    @Test
     @DisplayName("메시지 키가 1에서 100 사이의 값으로 생성된다")
+    @Test
     void getFortuneMessageKeyRange() {
         // given
         Locale locale = Locale.getDefault();
