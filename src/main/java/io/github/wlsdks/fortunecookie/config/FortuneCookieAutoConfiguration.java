@@ -1,7 +1,7 @@
 package io.github.wlsdks.fortunecookie.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieInterceptor;
+import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieResponseAdvice;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.DefaultFortuneProvider;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
@@ -12,7 +12,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ResourceBundleMessageSource;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -64,21 +63,16 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     }
 
     /**
-     * 포춘 쿠키 인터셉터 빈을 구성합니다.
-     * HTTP 응답에 포춘 메시지를 추가하는 역할을 담당합니다.
+     * 포춘 쿠키 응답 어드바이스 빈을 구성합니다.
+     * HTTP 응답에 포춘 메시지를 자동으로 추가하는 역할을 합니다.
      */
     @Bean
     @ConditionalOnMissingBean
-    public FortuneCookieInterceptor fortuneCookieInterceptor(FortuneProvider fortuneProvider) {
-        return new FortuneCookieInterceptor(fortuneProvider, properties, objectMapper);
-    }
-
-    /**
-     * Spring MVC에 포춘 쿠키 인터셉터를 등록합니다.
-     */
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource())));
+    public FortuneCookieResponseAdvice fortuneCookieResponseAdvice(
+            FortuneProvider fortuneProvider,
+            FortuneCookieProperties properties,
+            ObjectMapper objectMapper) {
+        return new FortuneCookieResponseAdvice(fortuneProvider, properties, objectMapper);
     }
 
 }
