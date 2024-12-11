@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 import java.util.Locale;
 import java.util.Random;
 
+/**
+ * 포춘 메시지를 제공하는 기본 구현체입니다.
+ * 포춘 메시지는 메시지 프로퍼티 파일에서 랜덤하게 가져옵니다.
+ */
 @Component
 public class DefaultFortuneProvider implements FortuneProvider {
 
