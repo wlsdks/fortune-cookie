@@ -1,12 +1,12 @@
 package io.github.wlsdks;
 
-import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
+import io.github.wlsdks.fortunecookie.config.FortuneCookieAutoConfiguration;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.Import;
 
+@Import(FortuneCookieAutoConfiguration.class)
 @SpringBootApplication
-@EnableConfigurationProperties(FortuneCookieProperties.class)
 public class Main {
 
     public static void main(String[] args) {

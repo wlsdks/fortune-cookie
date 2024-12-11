@@ -16,9 +16,9 @@ public class DefaultFortuneProvider implements FortuneProvider {
     private static final String MESSAGE_PREFIX = "fortune."; // 메시지 프로퍼티 접두어
     private static final int FORTUNE_COUNT = 100;            // 포춘 메시지 개수
 
-    public DefaultFortuneProvider(MessageSource messageSource, Random random) {
+    public DefaultFortuneProvider(MessageSource messageSource) {
         this.messageSource = messageSource;
-        this.random = random;
+        this.random = new Random();
     }
 
     /**
