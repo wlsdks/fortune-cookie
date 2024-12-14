@@ -1,6 +1,7 @@
 package io.github.wlsdks.fortunecookie.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieInterceptor;
 import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieResponseAdvice;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.DefaultFortuneProvider;
@@ -12,6 +13,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -68,11 +70,33 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
      */
     @Bean
     @ConditionalOnMissingBean
-    public FortuneCookieResponseAdvice fortuneCookieResponseAdvice(
-            FortuneProvider fortuneProvider,
-            FortuneCookieProperties properties,
-            ObjectMapper objectMapper) {
+    public FortuneCookieResponseAdvice fortuneCookieResponseAdvice(FortuneProvider fortuneProvider,
+                                                                   FortuneCookieProperties properties,
+                                                                   ObjectMapper objectMapper) {
+        // 실제 어드바이스 빈 생성
         return new FortuneCookieResponseAdvice(fortuneProvider, properties, objectMapper);
+    }
+
+    /**
+     * 포춘 쿠키 인터셉터 빈을 구성합니다.
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public FortuneCookieInterceptor fortuneCookieInterceptor(FortuneProvider fortuneProvider,
+                                                             FortuneCookieProperties props,
+                                                             ObjectMapper objectMapper) {
+        // 실제 인터셉터 빈 생성
+        return new FortuneCookieInterceptor(fortuneProvider, props, objectMapper);
+    }
+
+    /**
+     * 인터셉터를 추가합니다.
+     */
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        // Bean으로 등록된 fortuneCookieInterceptor를 추가
+        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties, objectMapper))
+                .addPathPatterns("/**");
     }
 
 }
