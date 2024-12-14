@@ -62,20 +62,24 @@ publishing {
     publications {
         mavenJava(MavenPublication) {
             from components.java
-
-            // POM 파일에 추가 정보 기입
+            versionMapping {
+                usage('java-api') {
+                    fromResolutionOf('runtimeClasspath')
+                }
+                usage('java-runtime') {
+                    fromResolutionResult()
+                }
+            }
             pom {
                 name = 'Spring Fortune Cookie'
                 description = 'A Spring library that adds fortune messages to HTTP responses'
                 url = 'https://github.com/wlsdks/spring-fortune-cookie'
-
                 licenses {
                     license {
                         name = 'MIT License'
                         url = 'http://www.opensource.org/licenses/mit-license.php'
                     }
                 }
-
                 developers {
                     developer {
                         id = 'wlsdks'
