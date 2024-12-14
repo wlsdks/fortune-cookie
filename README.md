@@ -53,6 +53,21 @@ fortune.default=오늘도 좋은 하루 되세요!
 
 ## 📝 사용 예시
 
+### 스프링부트 설정코드 추가
+- 컴포넌트 스캔 코드를 추가해주셔야 합니다.
+```java
+// 컴포넌트 스캔 코드만 추가하면 됩니다.
+@ComponentScan(basePackages = {"com.example", "io.github.wlsdks.fortunecookie"})
+@SpringBootApplication
+public class TestApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(TestApplication.class, args);
+    }
+
+}
+```
+
 ### 기본 사용
 컨트롤러에서 일반적인 JSON 응답을 반환하면 자동으로 포춘 메시지가 추가됩니다:
 
