@@ -5,7 +5,6 @@ import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -15,7 +14,6 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -92,34 +90,20 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
-        // enabled가 false면 바로 원본 반환
-        if (!properties.isEnabled()) {
+        // 포춘 쿠키 기능이 비활성화되어 있으면 처리하지 않음
+        if (!(body instanceof Map)) {
             return body;
         }
 
-        // Locale 처리
-        Locale locale = Locale.getDefault();
-        List<String> acceptLanguages = request.getHeaders().get(HttpHeaders.ACCEPT_LANGUAGE);
-        if (acceptLanguages != null && !acceptLanguages.isEmpty()) {
-            locale = Locale.forLanguageTag(acceptLanguages.get(0).split(",")[0]);
-        }
+        // 포춘 메시지를 가져와서 응답 본문에 추가
+        String fortune = fortuneProvider.getFortune(request.getHeaders().getAcceptLanguage().isEmpty() ?
+                Locale.getDefault() :
+                Locale.forLanguageTag(request.getHeaders().getAcceptLanguage().get(0).toString()));
 
-        // 포춘 메시지 가져오기
-        String fortune = fortuneProvider.getFortune(locale);
-
-        // 헤더에 포춘 메시지 추가
-        if (properties.isIncludeHeader()) {
-            response.getHeaders().add(properties.getHeaderName(), fortune);
-        }
-
-        // JSON 응답에 포춘 메시지 추가
-        if (properties.isIncludeInResponse() && body instanceof Map) {
-            Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
-            map.put(properties.getResponseFortuneName(), fortune);
-            return map;
-        }
-
-        return body;
+        // 응답 본문에 포춘 메시지를 추가
+        Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
+        map.put(properties.getResponseFortuneName(), fortune);
+        return map;
     }
 
 }
