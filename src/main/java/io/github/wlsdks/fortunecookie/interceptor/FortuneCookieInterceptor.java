@@ -63,25 +63,6 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
     public void postHandle(HttpServletRequest request, HttpServletResponse response,
                            Object handler, ModelAndView modelAndView) throws Exception {
         log.debug(">>> FortuneCookieInterceptor postHandle called");
-        if (!properties.isEnabled()) {
-            return;
-        }
-
-        // 바디용 메시지(요청 로케일)
-        Locale bodyLocale = request.getLocale();
-        String bodyFortune = fortuneProvider.getFortune(bodyLocale);
-        log.debug(">>> postHandle: bodyFortune: {}", bodyFortune);
-
-        // 헤더용 메시지(영어로 고정)
-        Locale headerLocale = Locale.ENGLISH;
-        String headerFortune = fortuneProvider.getFortune(headerLocale);
-
-        if (properties.isIncludeHeader()) {
-            response.setHeader(properties.getHeaderName(), headerFortune);
-            log.debug(">>> postHandle: headerFortune set: {}", headerFortune);
-            String retrieved = response.getHeader(properties.getHeaderName());
-            log.debug(">>> postHandle: fortune header retrieved from response: {}", retrieved);
-        }
     }
 
     /**
@@ -92,25 +73,6 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response,
                                 Object handler, Exception ex) throws Exception {
         log.debug(">>> FortuneCookieInterceptor afterCompletion called");
-        if (!properties.isEnabled()) {
-            return;
-        }
-
-        // 바디 로케일
-        Locale bodyLocale = request.getLocale();
-        String bodyFortune = fortuneProvider.getFortune(bodyLocale);
-        log.debug(">>> afterCompletion: bodyFortune: {}", bodyFortune);
-
-        // 헤더는 영어 강제
-        Locale headerLocale = Locale.ENGLISH;
-        String headerFortune = fortuneProvider.getFortune(headerLocale);
-
-        if (properties.isIncludeHeader()) {
-            response.setHeader(properties.getHeaderName(), headerFortune);
-            log.debug(">>> afterCompletion: headerFortune set: {}", headerFortune);
-            String retrieved = response.getHeader(properties.getHeaderName());
-            log.debug(">>> afterCompletion: fortune header retrieved from response: {}", retrieved);
-        }
     }
 
 }
