@@ -76,6 +76,18 @@ public class TestController {
 X-Fortune-Cookie: A positive mindset will bring positive results.
 ```
 
+만약 메시지 개수가 직접 설정한 fortunes-count보다 적다면 아래의 기본 메시지가 반환됩니다.
+- 기본 메시지도 커스터마이징 가능합니다.
+```properties
+{
+    # fortunes_ko
+    fortune.default=당신의 미래는 불확실합니다.
+
+    # fortunes_en
+    fortune.default=Your future is uncertain.
+}
+```
+
 ## ⚙️ 설정 옵션
 
 | 설정 | 타입 | 기본값 | 설명 |
