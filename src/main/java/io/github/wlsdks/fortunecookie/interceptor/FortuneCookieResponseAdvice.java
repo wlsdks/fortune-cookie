@@ -1,8 +1,8 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
@@ -10,11 +10,11 @@ import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -41,21 +41,17 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
 
     private final FortuneProvider fortuneProvider;
     private final FortuneCookieProperties properties;
-    private final ObjectMapper objectMapper;
 
     /**
      * FortuneCookieResponseAdvice를 생성합니다.
      *
      * @param fortuneProvider 포춘 메시지를 제공하는 프로바이더
      * @param properties      포춘 쿠키 설정 정보
-     * @param objectMapper    JSON 처리를 위한 ObjectMapper
      */
     public FortuneCookieResponseAdvice(FortuneProvider fortuneProvider,
-                                       FortuneCookieProperties properties,
-                                       ObjectMapper objectMapper) {
+                                       FortuneCookieProperties properties) {
         this.fortuneProvider = fortuneProvider;
         this.properties = properties;
-        this.objectMapper = objectMapper;
     }
 
     /**
@@ -90,20 +86,36 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
+        log.debug(">>> FortuneCookieResponseAdvice beforeBodyWrite called");
         // 포춘 쿠키 기능이 비활성화되어 있으면 처리하지 않음
         if (!(body instanceof Map)) {
             return body;
         }
 
-        // 포춘 메시지를 가져와서 응답 본문에 추가
-        String fortune = fortuneProvider.getFortune(request.getHeaders().getAcceptLanguage().isEmpty() ?
-                Locale.getDefault() :
-                Locale.forLanguageTag(request.getHeaders().getAcceptLanguage().get(0).toString()));
+        // Interceptor에서 저장한 바디용 포춘 메시지 읽기
+        HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+        String bodyFortune = (String) servletRequest.getAttribute("fortuneBody");
+        log.debug(">>> beforeBodyWrite: bodyFortune: {}", bodyFortune);
 
-        // 응답 본문에 포춘 메시지를 추가
-        Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
-        map.put(properties.getResponseFortuneName(), fortune);
-        return map;
+        if (bodyFortune != null && properties.isIncludeInResponse()) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
+            map.put(properties.getResponseFortuneName(), bodyFortune);
+            log.debug(">>> beforeBodyWrite: fortune added to response body");
+            return map;
+        }
+
+        return body;
+
+//        // 포춘 메시지를 가져와서 응답 본문에 추가
+//        String fortune = fortuneProvider.getFortune(request.getHeaders().getAcceptLanguage().isEmpty() ?
+//                Locale.getDefault() :
+//                Locale.forLanguageTag(request.getHeaders().getAcceptLanguage().get(0).toString()));
+//
+//        // 응답 본문에 포춘 메시지를 추가
+//        Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
+//        map.put(properties.getResponseFortuneName(), fortune);
+//        return map;
     }
 
 }

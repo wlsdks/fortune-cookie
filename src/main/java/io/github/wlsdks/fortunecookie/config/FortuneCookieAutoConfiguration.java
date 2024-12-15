@@ -61,7 +61,7 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean(FortuneProvider.class)
     public FortuneProvider fortuneProvider(MessageSource messageSource) {
-        return new DefaultFortuneProvider(messageSource);
+        return new DefaultFortuneProvider(messageSource, properties);
     }
 
     /**
@@ -71,10 +71,9 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean
     public FortuneCookieResponseAdvice fortuneCookieResponseAdvice(FortuneProvider fortuneProvider,
-                                                                   FortuneCookieProperties properties,
-                                                                   ObjectMapper objectMapper) {
+                                                                   FortuneCookieProperties properties) {
         // 실제 어드바이스 빈 생성
-        return new FortuneCookieResponseAdvice(fortuneProvider, properties, objectMapper);
+        return new FortuneCookieResponseAdvice(fortuneProvider, properties);
     }
 
     /**

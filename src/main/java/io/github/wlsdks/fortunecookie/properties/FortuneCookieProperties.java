@@ -45,4 +45,7 @@ public class FortuneCookieProperties {
     // 커스텀 포춘 메시지 경로 (기본 메시지 대신 사용자 정의 메시지를 사용할 경우 설정)
     private String customMessagesPath = "";
 
+    // 포춘 메시지의 총 개수
+    private int fortunesCount = 50; // 기본값을 50으로 설정
+
 }
