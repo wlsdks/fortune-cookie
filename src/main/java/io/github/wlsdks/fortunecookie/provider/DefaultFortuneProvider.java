@@ -27,16 +27,13 @@ public class DefaultFortuneProvider implements FortuneProvider {
     }
 
     /**
-     * 포춘 키를 생성합니다.
-     * 랜덤으로 인덱스를 선택하여 키를 생성합니다.
+     * fortunes-count 설정값 범위 내에서 랜덤한 키를 생성합니다.
      *
-     * @return 포춘 메시지 키
+     * @return 생성된 포춘 메시지 키 (예: "fortune.1", "fortune.2" 등)
      */
-    @Override
     public String generateFortuneKey() {
-        // fortune 파일에 정의된 메시지 수 기반으로 랜덤 선택
-        int index = random.nextInt(properties.getFortunesCount()) + 1; // 1부터 N까지
-        return MESSAGE_PREFIX + index;
+        int messageIndex = random.nextInt(properties.getFortunesCount()) + 1;
+        return MESSAGE_PREFIX + messageIndex;
     }
 
     /**
@@ -49,7 +46,13 @@ public class DefaultFortuneProvider implements FortuneProvider {
     @Override
     public String getFortune(String fortuneKey, Locale locale) {
         try {
-            return messageSource.getMessage(fortuneKey, null, locale);
+            String message = messageSource.getMessage(fortuneKey, null, locale);
+            if (message.contains("fortune")) {
+                // fortune.1, fortune.2 등의 메시지가 없을 경우 기본 메시지 반환
+                return messageSource.getMessage("fortune.default", null,
+                        "Today is your lucky day!", locale);
+            }
+            return message;
         } catch (Exception e) {
             // 키가 없거나 다른 문제가 발생했을 때 기본 메시지 반환
             return messageSource.getMessage("fortune.default", null,

@@ -106,16 +106,6 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
         }
 
         return body;
-
-//        // 포춘 메시지를 가져와서 응답 본문에 추가
-//        String fortune = fortuneProvider.getFortune(request.getHeaders().getAcceptLanguage().isEmpty() ?
-//                Locale.getDefault() :
-//                Locale.forLanguageTag(request.getHeaders().getAcceptLanguage().get(0).toString()));
-//
-//        // 응답 본문에 포춘 메시지를 추가
-//        Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
-//        map.put(properties.getResponseFortuneName(), fortune);
-//        return map;
     }
 
 }
