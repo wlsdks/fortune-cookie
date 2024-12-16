@@ -4,7 +4,9 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Setter
@@ -47,5 +49,15 @@ public class FortuneCookieProperties {
 
     // 포춘 메시지의 총 개수
     private int fortunesCount = 50; // 기본값을 50으로 설정
+
+    // 플레이스홀더 치환 기능 사용 여부 (true로 설정하면 라이브러리가 메시지에 포함된 {...}를 찾아 자동 치환을 시도합니다.)
+    private boolean placeholderEnabled = false;
+
+    /**
+     * 플레이스홀더 매핑 정보
+     * 예: userName: "header:X-User-Name"
+     * userEmail: "session:USER_EMAIL"
+     */
+    private Map<String, String> placeholderMapping = new HashMap<>();
 
 }

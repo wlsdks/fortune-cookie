@@ -4,6 +4,8 @@ import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.Locale;
 import java.util.Random;
 
@@ -37,6 +39,17 @@ public class DefaultFortuneProvider implements FortuneProvider {
         // 1% 확률로 특별한 메시지 반환
         if (roll < 0.01) {
             return "fortune.special";
+        }
+
+        // 일자별로 다른 메시지 반환
+        DayOfWeek dayOfWeek = LocalDate.now().getDayOfWeek();
+        if (dayOfWeek == DayOfWeek.MONDAY) {
+            // 월요일에는 "fortune.monday" 메시지 반환
+            return "fortune.monday";
+        }
+        if (dayOfWeek == DayOfWeek.FRIDAY) {
+            // 금요일에는 "fortune.friday" 메시지 반환
+            return "fortune.friday";
         }
 
         // 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택

@@ -4,12 +4,14 @@ import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답 헤더에 추가하는 인터셉터입니다.
@@ -28,15 +30,73 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
     }
 
     // placeHolder 치환 메서드
-    private String applyPlaceHolders(String message, HttpServletRequest request) {
-        //  예시: 헤더에서 username을 읽어오거나 SecurityContext에서 username을 받아오는 등의 동작
-        String userName = request.getHeader("X-User-Name");
-        if (userName == null) {
-            userName = "Guest";
+    private String applyPlaceHolders(String originalMessage, HttpServletRequest request) {
+        // placeholderEnabled가 꺼져 있으면 그냥 원본 메시지 리턴
+        if (!properties.isPlaceholderEnabled()) {
+            return originalMessage;
         }
 
-        // 간단한 치환로직 (실제로는 StringSubstitutor 또는 MessageFormat 사용 권장)
-        return message.replace("{userName", userName);
+        // 실제 치환 로직
+        String result = originalMessage;
+        for (Map.Entry<String, String> entry : properties.getPlaceholderMapping().entrySet()) {
+            String placeholderKey = entry.getKey();      // e.g. "userName"
+            String mappingSpec = entry.getValue();       // e.g. "header:X-User-Name"
+            String placeholderPattern = "{" + placeholderKey + "}";
+
+            // 실제로 원본 메시지에 {userName} 같은 플레이스홀더가 없으면 스킵
+            if (!result.contains(placeholderPattern)) {
+                continue;
+            }
+
+            // mappingSpec을 파싱해서 값을 가져옴
+            String resolvedValue = resolvePlaceholderValue(mappingSpec, request);
+
+            // 치환
+            if (resolvedValue != null) {
+                result = result.replace(placeholderPattern, resolvedValue);
+            } else {
+                // 못 찾았으면 "Guest" 등 기본값 혹은 그대로 둠
+                result = result.replace(placeholderPattern, "Guest");
+            }
+        }
+        return result;
+    }
+
+    /**
+     * mappingSpec을 분석해 헤더나 세션에서 값을 가져오는 메서드
+     * 예: "header:X-User-Name" → request.getHeader("X-User-Name")
+     * "session:USER_NAME"   → request.getSession().getAttribute("USER_NAME")
+     */
+    private String resolvePlaceholderValue(String mappingSpec, HttpServletRequest request) {
+        if (mappingSpec == null || mappingSpec.isBlank()) {
+            return null;
+        }
+
+        // 예: "header:X-User-Name"
+        String[] tokens = mappingSpec.split(":");
+        if (tokens.length != 2) {
+            return null;
+        }
+
+        String sourceType = tokens[0];  // "header", "session", "security" 등
+        String sourceKey = tokens[1];   // "X-User-Name", "USER_NAME"
+
+        switch (sourceType) {
+            case "header":
+                return request.getHeader(sourceKey);
+            case "session":
+                HttpSession session = request.getSession(false);
+                if (session != null) {
+                    Object val = session.getAttribute(sourceKey);
+                    return val != null ? val.toString() : null;
+                }
+                return null;
+            // case "security":
+            //    // SecurityContextHolder에서 꺼내는 로직 등
+            //    ...
+            default:
+                return null;
+        }
     }
 
     /**
@@ -53,19 +113,19 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
             return true; // 기능 비활성화이면 그냥 통과
         }
 
-        // 포춘 키 생성
+        // 1) 무작위 포춘 메시지 키 생성
         String fortuneKey = fortuneProvider.generateFortuneKey();
 
         // 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
         String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
         headerFortune = applyPlaceHolders(headerFortune, request);
 
-        // 헤더에 포춘 쿠키 추가
+        // 2) 헤더에 포춘 쿠키 추가
         if (properties.isIncludeHeader()) {
             response.setHeader(properties.getHeaderName(), headerFortune);
         }
 
-        // 바디용 메시지 Request Locale로 포춘 메시지 생성
+        // 3) 바디용 메시지 Request Locale로 포춘 메시지 생성
         String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
         bodyFortune = applyPlaceHolders(bodyFortune, request);
 
