@@ -32,6 +32,14 @@ public class DefaultFortuneProvider implements FortuneProvider {
      * @return 생성된 포춘 메시지 키 (예: "fortune.1", "fortune.2" 등)
      */
     public String generateFortuneKey() {
+        double roll = random.nextDouble();
+
+        // 1% 확률로 특별한 메시지 반환
+        if (roll < 0.01) {
+            return "fortune.special";
+        }
+
+        // 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택
         int messageIndex = random.nextInt(properties.getFortunesCount()) + 1;
         return MESSAGE_PREFIX + messageIndex;
     }
