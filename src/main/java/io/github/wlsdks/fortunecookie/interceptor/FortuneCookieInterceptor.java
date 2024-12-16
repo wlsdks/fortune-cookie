@@ -27,13 +27,27 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         this.properties = properties;
     }
 
+    // placeHolder 치환 메서드
+    private String applyPlaceHolders(String message, HttpServletRequest request) {
+        //  예시: 헤더에서 username을 읽어오거나 SecurityContext에서 username을 받아오는 등의 동작
+        String userName = request.getHeader("X-User-Name");
+        if (userName == null) {
+            userName = "Guest";
+        }
+
+        // 간단한 치환로직 (실제로는 StringSubstitutor 또는 MessageFormat 사용 권장)
+        return message.replace("{userName", userName);
+    }
+
     /**
      * preHandle : 컨트롤러 실행 전에 호출
      * - 헤더는 영어로 고정
      * - 바디는 요청 로케일에 맞춤
      */
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request,
+                             HttpServletResponse response,
+                             Object handler) throws Exception {
         log.debug(">>> FortuneCookieInterceptor preHandle called");
         if (!properties.isEnabled()) {
             return true; // 기능 비활성화이면 그냥 통과
@@ -41,24 +55,19 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
 
         // 포춘 키 생성
         String fortuneKey = fortuneProvider.generateFortuneKey();
-        log.debug(">>> preHandle: generated fortuneKey: {}", fortuneKey);
 
-        // 헤더용 메시지 (영어로 고정)
-        Locale headerLocale = Locale.ENGLISH;
-        String headerFortune = fortuneProvider.getFortune(fortuneKey, headerLocale);
-        log.debug(">>> preHandle: headerFortune: {}", headerFortune);
+        // 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
+        String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
+        headerFortune = applyPlaceHolders(headerFortune, request);
 
+        // 헤더에 포춘 쿠키 추가
         if (properties.isIncludeHeader()) {
             response.setHeader(properties.getHeaderName(), headerFortune);
-            log.debug(">>> preHandle: headerFortune set: {}", headerFortune);
-            String retrieved = response.getHeader(properties.getHeaderName());
-            log.debug(">>> preHandle: fortune header retrieved from response: {}", retrieved);
         }
 
-        // 바디용 메시지 (요청 로케일)
-        Locale bodyLocale = request.getLocale();
-        String bodyFortune = fortuneProvider.getFortune(fortuneKey, bodyLocale);
-        log.debug(">>> preHandle: bodyFortune: {}", bodyFortune);
+        // 바디용 메시지 Request Locale로 포춘 메시지 생성
+        String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
+        bodyFortune = applyPlaceHolders(bodyFortune, request);
 
         // Request Attribute에 저장 (ResponseBodyAdvice에서 사용)
         request.setAttribute("fortuneBody", bodyFortune);
