@@ -23,19 +23,17 @@ java {
     withJavadocJar()  // Javadoc JAR 생성
 }
 
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    // Spring Framework
-    implementation 'org.springframework:spring-webmvc'
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-
-    // Jackson for JSON processing
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    // 메인 의존성 (compileOnly)
+    compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
+    compileOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+    compileOnly 'org.slf4j:slf4j-api:2.0.16'
+    compileOnly 'org.springframework:spring-webmvc'
+    compileOnly 'com.fasterxml.jackson.core:jackson-databind'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -44,20 +42,20 @@ dependencies {
     // Spring Boot Configuration Processor
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    // Test dependencies
+    // 테스트 의존성 (testImplementation)
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-web' // 테스트용으로만 추가
     testImplementation 'org.junit.jupiter:junit-jupiter'
-
-    // Mockito
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
 }
 
 test {
     useJUnitPlatform()
 }
 
-// Maven 배포를 위한 설정
+// Maven Publish 설정
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -94,6 +92,3 @@ publishing {
         mavenLocal()
     }
 }
-
-// ./gradlew clean build publishToMavenLocal
-// 사용할대는 : implementation 'io.github.wlsdks:spring-fortune-cookie:0.1.0-SNAPSHOT'
