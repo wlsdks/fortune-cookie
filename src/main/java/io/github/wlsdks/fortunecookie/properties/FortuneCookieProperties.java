@@ -53,11 +53,16 @@ public class FortuneCookieProperties {
     // 플레이스홀더 치환 기능 사용 여부 (true로 설정하면 라이브러리가 메시지에 포함된 {...}를 찾아 자동 치환을 시도합니다.)
     private boolean placeholderEnabled = false;
 
-    /**
-     * 플레이스홀더 매핑 정보
-     * 예: userName: "header:X-User-Name"
-     * userEmail: "session:USER_EMAIL"
-     */
+    // 플레이스홀더 매핑 정보 (예: userName: "header:X-User-Name")
     private Map<String, String> placeholderMapping = new HashMap<>();
+
+    // 모드: fortune(기본), joke, quote 등: 이 값에 따라 다른 메시지 세트나 로직을 적용할 수 있음
+    private String mode = "fortune";
+
+    // 미니 게임 기능 활성화 여부 (true일 경우 숫자 맞히기 등 미니 게임 기능 활성)
+    private boolean gameEnabled = false;
+
+    // 미니 게임에서 사용할 숫자 범위 (1 ~ gameRange 사이의 숫자를 맞히도록)
+    private int gameRange = 10;
 
 }
