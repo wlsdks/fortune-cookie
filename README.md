@@ -16,13 +16,16 @@
 2. **플레이스홀더(Placeholder) 치환**
    - `{userName}` 등 동적 변수(헤더/세션/기타) 자동 매핑
 3. **다국어(i18n) 지원**
-   - `fortunes_ko.properties`, `fortunes_en.properties` 등 여러 언어 메시지
+   - `fortunes_ko.properties`, `fortunes_en.properties` 등 다양한 언어 메시지 지원
 4. **커스터마이징 옵션**
-   - URL 패턴 필터링(`excludePatterns`), 특정 상태 코드만 적용(`includedStatusCodes`), 에러 응답 포함(`includeOnError`) 등
-   - 메시지 최대 길이(`maxFortuneLength`), 디버그 모드(`debug`)
-   - 커스텀 메시지 경로(`customMessagesPath`)
-5. **Auto-Configuration**
-   - Spring Boot Starter처럼 설정 파일(`application.yml`)만 추가하면 동작
+   - URL 패턴 필터링(`excludePatterns`), 특정 상태 코드만 적용(`includedStatusCodes`), 에러 응답 포함(`includeOnError`)
+   - 메시지 최대 길이(`maxFortuneLength`), 디버그 모드(`debug`), 커스텀 메시지 경로(`customMessagesPath`)
+5. **모드 전환 기능 (0.0.3 추가)**
+   - `fortune`, `joke`, `quote` 등 모드에 따라 다른 메시지 세트 사용 가능
+6. **미니 게임 기능 (0.0.3 추가)**
+   - 숫자 맞히기 게임을 통해 단순한 메시지 제공을 넘어 상호작용 가능
+7. **Auto-Configuration**
+   - Spring Boot Starter처럼 설정 파일(`application.yml`)만 추가하면 자동 동작
 
 ---
 
@@ -43,7 +46,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'io.github.wlsdks:spring-fortune-cookie:0.2.0-SNAPSHOT'
+    implementation 'io.github.wlsdks:spring-fortune-cookie:0.3.0-SNAPSHOT'
 }
 ```
 
@@ -101,28 +104,92 @@ X-Fortune-Cookie: Today is a day full of luck!
 
 `application.yml`에서 `fortune-cookie` 프리픽스로 다양한 설정 변경 가능:
 
+| 설정 항목                   | 타입              | 기본값                        | 설명                                                                                          |
+|----------------------------|-------------------|--------------------------------|-------------------------------------------------------------------------------------------------|
+| `enabled`                  | boolean           | `true`                         | 라이브러리 전체 활성/비활성                                                                     |
+| `include-header`           | boolean           | `true`                         | 응답 헤더에 포춘 메시지 포함 여부                                                               |
+| `header-name`              | String            | `"X-Fortune-Cookie"`           | 포춘 메시지를 담을 헤더 이름                                                                    |
+| `include-in-response`      | boolean           | `true`                         | JSON 바디에 포춘 메시지 추가 여부                                                               |
+| `response-fortune-name`    | String            | `"fortune"`                    | JSON 바디에 추가될 필드 이름                                                                    |
+| `includedStatusCodes`      | Set<Integer>      | 빈 Set (`[]`)                 | 특정 상태 코드에만 메시지 삽입 (비어있으면 모든 상태 코드)                                      |
+| `excludePatterns`          | Set<String>       | 빈 Set (`[]`)                 | 특정 URL 패턴을 포춘 메시지에서 제외                                                            |
+| `includeOnError`           | boolean           | `true`                         | 에러 응답에도 메시지를 포함할지                                                                 |
+| `maxFortuneLength`         | int               | `0`                            | 메시지 최대 길이 (0 = 무제한)                                                                   |
+| `debug`                    | boolean           | `false`                        | 디버그 모드 (true면 메시지 생성/치환 로깅 등 상세 출력)                                         |
+| `customMessagesPath`       | String            | `""` (빈 문자열)               | 사용자 정의 메시지 파일 경로                                                                    |
+| `fortunesCount`            | int               | `50`                           | 메시지 총 개수 (기본 fortunes 파일에서 1~50 인덱스)                                              |
+| **`placeholder-enabled`**  | boolean           | `false`                        | 플레이스홀더 치환 기능 활성화 (true 시 `{userName}` 등 치환)                                     |
+| **`placeholder-mapping`**  | Map<String,String>| 빈 맵 (`{}`)                  | `{플레이스홀더명}: "header:X-User-Name"` 식으로 치환 규칙 정의 (header/session 등)               |
+| **`mode`** (0.0.3 추가)    | String            | `"fortune"`                    | 메시지 모드 설정: `fortune`, `joke`, `quote` 중 하나 선택 가능                                  |
+| **`game-enabled`** (0.0.3 추가)| boolean       | `false`                        | 미니 게임 기능 활성화 (true 시 숫자 맞히기 게임 실행)                                           |
+| **`game-range`** (0.0.3 추가)| int             | `10`                           | 미니 게임 숫자 범위 (1~game-range 사이의 숫자 추측)                                              |
+
 ---
 
-| 설정 항목                 | 타입              | 기본값                        | 설명                                                                                          |
-|--------------------------|-------------------|--------------------------------|-------------------------------------------------------------------------------------------------|
-| `enabled`                | boolean           | `true`                         | 라이브러리 전체 활성/비활성                                                                     |
-| `include-header`         | boolean           | `true`                         | 응답 헤더에 포춘 메시지 포함 여부                                                               |
-| `header-name`            | String            | `"X-Fortune-Cookie"`           | 포춘 메시지를 담을 헤더 이름                                                                    |
-| `include-in-response`    | boolean           | `true`                         | JSON 바디에 포춘 메시지 추가할지 여부                                                           |
-| `response-fortune-name`  | String            | `"fortune"`                    | JSON 바디에 추가될 필드 이름                                                                    |
-| `includedStatusCodes`    | Set<Integer>       | 빈 Set (`[]`)                 | 특정 상태 코드에만 메시지 삽입 (비어있으면 모든 상태 코드)                                      |
-| `excludePatterns`        | Set<String>        | 빈 Set (`[]`)                 | 특정 URL 패턴을 포춘 메시지에서 제외                                                            |
-| `includeOnError`         | boolean           | `true`                         | 에러 응답에도 메시지를 포함할지                                                                 |
-| `maxFortuneLength`       | int               | `0`                            | 메시지 최대 길이 (0 = 무제한)                                                                   |
-| `debug`                  | boolean           | `false`                        | 디버그 모드 (true면 메시지 생성/치환 로깅 등 상세 출력)                                         |
-| `customMessagesPath`     | String            | `""` (빈 문자열)               | 사용자 정의 메시지 파일 경로                                                                    |
-| `fortunesCount`          | int               | `50`                           | 메시지 총 개수 (기본 fortunes 파일에서 1~50 인덱스)                                              |
-| **`placeholder-enabled`** | boolean           | `false`                        | 플레이스홀더 치환 기능 활성화 여부 (true이면 `{userName}` 등의 플레이스홀더를 실제 값으로 치환) |
-| **`placeholder-mapping`** | Map<String,String>| 빈 맵 (`{}`)                  | `{플레이스홀더명}: "header:X-User-Name"` 식으로 치환 규칙을 정의 (header/session/security 등)    |
+## 🔥 0.0.3 버전 추가 기능
+
+### 1) 모드 전환 기능
+
+`mode` 프로퍼티를 통해 메시지 모드를 변경할 수 있습니다.
+- `fortune` (기본): 기존 포춘 메시지
+- `joke`: 농담 메시지(`fortune.joke.*`) 사용
+- `quote`: 명언 메시지(`fortune.quote.*`) 사용
+
+**application.yml 예시:**
+```yaml
+fortune-cookie:
+  mode: joke   # joke 모드 설정
+```
+
+메시지 파일 예시(`fortunes_en.properties`):
+```properties
+fortune.joke.1=Why don’t programmers like nature? Because it has too many bugs.
+fortune.joke.2=I told my computer I needed a break, and it said: 'No problem, I’ll go on a byte!'
+fortune.joke.default=No jokes for you today.
+```
+
+이렇게 설정하면 호출할 때마다 농담 메시지가 랜덤하게 나타납니다.
+
+### 2) 미니 게임 기능
+
+`game-enabled`를 true로 설정하면, 간단한 숫자 맞히기 게임을 즐길 수 있습니다.  
+`game-range`로 추측 범위를 지정할 수 있으며, 기본값은 10입니다.
+
+사용자가 요청 시 `X-Guess` 헤더를 보내 숫자를 추측하면, 맞추면 축하 메시지를, 틀리면 재도전 메시지를 응답 바디에 추가합니다.  
+`X-Guess` 헤더 없이 요청하면 안내 메시지가 표시됩니다.
+
+**application.yml 예시:**
+```yaml
+fortune-cookie:
+  game-enabled: true
+  game-range: 20
+```
+
+**요청 예시:**
+```http
+GET /api/hello
+X-Guess: 7
+```
+
+**응답 예시 (틀린 경우):**
+```json
+{
+  "message": "Hello World!",
+  "fortune": "오늘은 행운이 가득한 날입니다! Wrong guess! Try again!"
+}
+```
+
+맞추면:
+```json
+{
+  "message": "Hello World!",
+  "fortune": "오늘은 행운이 가득한 날입니다! You guessed correctly! The secret number was 7."
+}
+```
 
 ---
 
-### 플레이스홀더(Placeholder) 기능
+## 플레이스홀더(Placeholder) 기능
 
 `{userName}`, `{today}` 등 런타임 변수를 메시지 안에서 치환하려면 다음 옵션들을 추가할 수 있습니다:
 
@@ -134,44 +201,44 @@ fortune-cookie:
     userEmail: "header:X-User-Email"
 ```
 - `placeholder-enabled`: 플레이스홀더 치환 기능 활성화
-- `placeholder-mapping`: `{플레이스홀더명}` → “header:헤더키”, “session:세션Key” 등 매핑  
-  예) `userName: "header:X-User-Name"` 이면 `{userName}`을 `X-User-Name` 헤더 값으로 치환
+- `placeholder-mapping`: `{플레이스홀더명}` → "header:헤더키" 등의 규칙 설정
 
-**메시지 파일 예시** (`fortunes_en.properties`):
+메시지 파일 예시(`fortunes_en.properties`):
 ```properties
 fortune.1=Hello, {userName}! Today is your lucky day!
 fortune.2=Welcome back, {userName}! Your email is {userEmail}.
 fortune.default=Your future is uncertain.
 ```
 
-**요청 헤더**:
+요청:
 ```http
 GET /api/hello
 X-User-Name: Tony
 X-User-Email: tony@stark.com
 ```
 
-**응답(JSON 바디)**:
+응답(JSON 바디):
 ```json
 {
    "message": "Hello World!",
    "fortune": "Welcome back, Tony! Your email is tony@stark.com."
 }
 ```
+
 ---
 
 ## 🔧 커스터마이징
 
 ### 1. 메시지 파일 오버라이딩
-사용하는 프로젝트에서 메시지를 커스터마이징하려면 동일한 경로에 properties 파일을 생성하면 됩니다:
+
+사용하는 프로젝트에서 메시지 파일을 커스터마이징하면, 라이브러리보다 우선하여 적용됩니다:
 
 ```
-src/main/resources/fortunes/fortunes_ko.properties  # 한국어 메시지
-src/main/resources/fortunes/fortunes_en.properties  # 영어 메시지
+src/main/resources/fortunes/fortunes_ko.properties
+src/main/resources/fortunes/fortunes_en.properties
 ```
 
 예시:
-- fortunes_ko.properties
 ```properties
 fortune.1=우리 회사만의 특별한 메시지1
 fortune.2=우리 회사만의 특별한 메시지2
@@ -182,26 +249,15 @@ fortune.default=우리 회사의 기본 메시지입니다
 fortune.special=와.. 이게 당첨된다고?? 1% 확률로 나오는 메시지입니다.
 ```
 
-- fortunes_en.properties
-```properties
-fortune.1=Company special message 1
-fortune.2=Company special message 2
-fortune.3=Company special message 3
-fortune.4=Company special message 4
-fortune.5=Company special message 5
-fortune.default=Company default message
-fortune.special=Wow.. Is this a winning message?? This is a 1% probability message.
-```
-
-그리고 application.yml에서 메시지 수 설정:
+`application.yml`에서 메시지 수 설정:
 ```yaml
 fortune-cookie:
-  fortunes-count: 5  # 실제 메시지 수에 맞게 설정 (default, special은 포함안됨)
+  fortunes-count: 5
 ```
 
 ### 2) 커스텀 FortuneProvider
 
-`FortuneProvider` 인터페이스를 구현하면 DB/외부 API에서 메시지를 가져올 수도 있습니다:
+`FortuneProvider` 인터페이스를 구현하면 DB나 외부 API에서 메시지를 가져올 수도 있습니다:
 
 ```java
 @Component
@@ -209,18 +265,18 @@ public class DatabaseFortuneProvider implements FortuneProvider {
     
     @Override
     public String generateFortuneKey() {
-        // DB 조회 후 무작위 ID 결정
+        // DB 조회 후 무작위 키 결정
         return "fortune.123";
     }
 
     @Override
     public String getFortune(String fortuneKey, Locale locale) {
-        // DB나 외부 API에서 fortuneKey로 메시지 가져오기
         return "DB-based fortune message!";
     }
 }
 ```
-`@ConditionalOnMissingBean(FortuneProvider.class)` 덕분에, 새 Provider가 등록되면 `DefaultFortuneProvider` 대신 사용됩니다.
+
+`@ConditionalOnMissingBean(FortuneProvider.class)` 덕분에 새 Provider가 등록되면 `DefaultFortuneProvider` 대신 사용됩니다.
 
 ---
 
@@ -240,7 +296,7 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 
 ## 💬 문의
 
-- GitHub: [@stark97](https://github.com/wlsdks)
+- GitHub: [@stark](https://github.com/wlsdks)
 
 ---
 
@@ -251,11 +307,16 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 - 다국어(i18n) 지원 (ko/en)
 - Spring Boot 3.x Auto Configuration
 - `FortuneProvider` 커스텀 가능
-- 주요 설정( `fortunesCount`, `debug`, `excludePatterns` 등) 제공
+- 주요 설정(`fortunesCount`, `debug`, `excludePatterns` 등) 제공
 
 ### **0.2.0-SNAPSHOT**
 - 플레이스홀더(Placeholder) 치환 기능 추가
 - 1% 확률 레어 메시지 (Gamification)
 - 요일별(월/금) 메시지 로직 추가
+
+### **0.3.0-SNAPSHOT**
+- **모드 전환 기능 추가**: `fortune`, `joke`, `quote` 등 모드별 메시지 사용
+- **미니 게임 기능 추가**: 숫자 맞히기 게임 활성화(`game-enabled`), 범위(`game-range`) 지정 가능
+- 플레이스홀더, 레어 메시지, 요일별 메시지와 함께 더욱 풍부한 사용자 경험 제공
 
 ---
