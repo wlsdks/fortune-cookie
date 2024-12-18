@@ -12,6 +12,7 @@ import org.springframework.web.servlet.ModelAndView;
 
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답 헤더에 추가하는 인터셉터입니다.
@@ -22,11 +23,13 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
 
     private final FortuneProvider fortuneProvider;
     private final FortuneCookieProperties properties;
+    private final Random random;
 
     public FortuneCookieInterceptor(FortuneProvider fortuneProvider,
                                     FortuneCookieProperties properties) {
         this.fortuneProvider = fortuneProvider;
         this.properties = properties;
+        this.random = new Random();
     }
 
     // placeHolder 치환 메서드
@@ -59,6 +62,7 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                 result = result.replace(placeholderPattern, "Guest");
             }
         }
+
         return result;
     }
 
@@ -91,9 +95,6 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                     return val != null ? val.toString() : null;
                 }
                 return null;
-            // case "security":
-            //    // SecurityContextHolder에서 꺼내는 로직 등
-            //    ...
             default:
                 return null;
         }
@@ -108,26 +109,56 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) throws Exception {
-        log.debug(">>> FortuneCookieInterceptor preHandle called");
-        if (!properties.isEnabled()) {
-            return true; // 기능 비활성화이면 그냥 통과
-        }
+        // 1. 기능 비활성화이면 그냥 통과
+        if (!properties.isEnabled()) return true;
 
-        // 1) 무작위 포춘 메시지 키 생성
+        // 2. 무작위 포춘 메시지 키 생성 (mode에 따른 키 선택은 FortuneProvider 내부 로직에 반영됨)
         String fortuneKey = fortuneProvider.generateFortuneKey();
 
-        // 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
+        // 3. 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
         String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
         headerFortune = applyPlaceHolders(headerFortune, request);
 
-        // 2) 헤더에 포춘 쿠키 추가
+        // 4. 헤더에 포춘 쿠키 추가
         if (properties.isIncludeHeader()) {
             response.setHeader(properties.getHeaderName(), headerFortune);
         }
 
-        // 3) 바디용 메시지 Request Locale로 포춘 메시지 생성
+        // 5. 바디용 메시지 Request Locale로 포춘 메시지 생성
         String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
         bodyFortune = applyPlaceHolders(bodyFortune, request);
+
+        // 6. 미니게임 기능
+        if (properties.isGameEnabled()) {
+            // 세션에서 secretNumber를 가져옴, 없으면 새로 생성
+            HttpSession session = request.getSession();
+            Object secretNumber = session.getAttribute("secretNumber");
+            if (secretNumber == null) {
+                secretNumber = random.nextInt(properties.getGameRange()) + 1;
+                session.setAttribute("secretNumber", secretNumber);
+            }
+
+            // 클라이언트에서 X-Guess 헤더로 추측 값을 전달받음
+            String guessHeader = request.getHeader("X-Guess");
+            if (guessHeader != null) {
+                try {
+                    int guess = Integer.parseInt(guessHeader);
+                    if (guess == (int) secretNumber) {
+                        bodyFortune += " You guessed correctly! The secret number was " + secretNumber + ".";
+                        // 다음 라운드를 위해 새로운 숫자 생성
+                        secretNumber = random.nextInt(properties.getGameRange()) + 1;
+                        session.setAttribute("secretNumber", secretNumber);
+                    } else {
+                        bodyFortune += " Wrong guess! Try again!";
+                    }
+                } catch (NumberFormatException e) {
+                    bodyFortune += " (Invalid guess format. Please provide a number.)";
+                }
+            } else {
+                // 추측 헤더가 없으면 게임 안내 메시지
+                bodyFortune += " Guess a number between 1 and " + properties.getGameRange() + " using 'X-Guess' header!";
+            }
+        }
 
         // Request Attribute에 저장 (ResponseBodyAdvice에서 사용)
         request.setAttribute("fortuneBody", bodyFortune);
