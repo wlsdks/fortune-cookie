@@ -254,3 +254,5 @@ application-dev.yml
 .idea/workspace.xml
 .idea/tasks.xml
 .idea/material_theme_project_new.xml
+
+gradle.properties
