@@ -7,7 +7,7 @@ plugins {
     id 'com.vanniktech.maven.publish' version '0.30.0'
 }
 
-group = 'io.github.wlsdks' // 그룹 ID는 유지
+group = 'io.github.wlsdks'
 version = '0.3.1'
 sourceCompatibility = '21'
 archivesBaseName = 'fortune-cookie' // JAR 파일 이름 설정
@@ -20,10 +20,12 @@ jar {
     enabled = true // 일반 JAR 생성 활성화
 }
 
+// Java 컴파일 설정
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
+// Javadoc 설정
 tasks.withType(Javadoc) {
     options.encoding = 'UTF-8'
     options.addStringOption('Xdoclint:none', '-quiet')
@@ -62,16 +64,17 @@ test {
     useJUnitPlatform()
 }
 
+// Maven Central 배포 설정
 mavenPublishing {
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL) // Maven Central 배포
-    signAllPublications() // PGP 서명 사용
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)         // Maven Central 배포
+    signAllPublications()                                      // PGP 서명 사용
     coordinates("io.github.wlsdks", "fortune-cookie", "0.3.1") // 새로운 Artifact ID로 설정
 
     pom {
         name = "Fortune Cookie"
         description = "A library that adds fortune messages to HTTP responses in Spring"
         inceptionYear = "2024"
-        url = "https://github.com/wlsdks/fortune-cookie" // 업데이트된 GitHub URL
+        url = "https://github.com/wlsdks/fortune-cookie"
 
         licenses {
             license {
