@@ -8,8 +8,9 @@ plugins {
 }
 
 group = 'io.github.wlsdks' // 그룹 ID는 유지
-version = '0.3.0'
+version = '0.3.1'
 sourceCompatibility = '21'
+archivesBaseName = 'fortune-cookie' // JAR 파일 이름 설정
 
 bootJar {
     enabled = false // Spring Boot의 실행 가능한 JAR 생성 비활성화
@@ -64,7 +65,7 @@ test {
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL) // Maven Central 배포
     signAllPublications() // PGP 서명 사용
-    coordinates("io.github.wlsdks", "fortune-cookie", "0.3.0") // 새로운 Artifact ID로 설정
+    coordinates("io.github.wlsdks", "fortune-cookie", "0.3.1") // 새로운 Artifact ID로 설정
 
     pom {
         name = "Fortune Cookie"
