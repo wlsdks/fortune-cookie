@@ -1,7 +1,14 @@
-# Spring Fortune Cookie Library
+# Fortune Cookie Library
 
-**Spring Fortune Cookie Library**는 **Spring Boot 3** 이상 환경에서 **간단한 설정**만으로 HTTP 응답(헤더 & JSON 바디)에 랜덤 포춘(운세) 메시지를 자동으로
+**Fortune Cookie Library**는 **Spring Boot 3** 이상 환경에서 **간단한 설정**만으로 HTTP 응답(헤더 & JSON 바디)에 랜덤 포춘(운세) 메시지를 자동으로
 추가해주는 라이브러리입니다.
+
+
+> Spring 팀과의 연관성 안내 (Spring Team Relationship Notice):
+> - 본 라이브러리는 Spring Framework/Spring Boot와 공식적으로 연관된 프로젝트가 아닙니다.
+> - Spring 기반의 라이브러리를 제공하기 위해 설계되었으며, 독립적으로 개발되었습니다.
+> - This library is not officially affiliated with Spring Framework/Spring Boot.
+> - It is designed to provide a library based on Spring and developed independently.
 
 > **목표**
 > - API 응답에 재미 요소(포춘 메시지)를 부가
@@ -32,44 +39,44 @@
 
 ## 🚀 시작하기
 
-### 1) 로컬 Maven 저장소에 라이브러리 설치
+### 🚨 Deprecated Notice
+> 중요 공지 (Important Notice) :
+  > - spring-fortune-cookie 아티팩트는 fortune-cookie로 이름이 변경되었으며, 더 이상 업데이트나 유지보수가 제공되지 않습니다. 
+  > - Maven Central에는 기존의 spring-fortune-cookie가 남아있을테지만 사용자들은 모두 다음과 같이 의존성을 업데이트해 주시기 바랍니다. 
+  > - The artifact spring-fortune-cookie has been renamed to fortune-cookie and is now deprecated. This means no further updates or maintenance will be provided for spring-fortune-cookie. Please update your dependencies to use the new artifact.
 
-```bash
-./gradlew clean build publishToMavenLocal
+> 스프링 프로젝트와의 혼동 방지 설명 (Avoiding Confusion with Spring Projects):
+  > - 프로젝트 이름에서 spring 접두사가 제거된 이유는 Spring Framework/Spring Boot와 공식적으로 연관된 프로젝트라는 혼동을 방지하기 위함입니다. 
+  > - This change was made to avoid confusion with officially affiliated Spring Framework/Spring Boot projects.
+  > - **fortune-cookie**는 Spring 기반 애플리케이션에서 사용할 수 있는 독립적인 라이브러리이며, Spring 팀과의 공식적인 연관은 없습니다. 
+  > - fortune-cookie is an independent library designed for use in Spring-based applications and is not officially affiliated with the Spring team.
+
+### 1) Maven Cental에서 라이브러리 추가
+- Fortune Cookie는 Maven Central에 배포되어 있습니다. 프로젝트에서 다음 의존성을 추가하세요.
+- Link : https://central.sonatype.com/artifact/io.github.wlsdks/fortune-cookie
+
+#### Maven
+``` groovy
+<dependency>
+    <groupId>io.github.wlsdks</groupId>
+    <artifactId>fortune-cookie</artifactId>
+    <version>0.3.0</version>
+</dependency>
 ```
 
-### 2) Gradle 의존성 추가
-
-- 라이브러리를 프로젝트에 추가하려면 build.gradle 파일에 다음 의존성을 추가하세요.
-- Spring Boot Starter Web 의존성을 먼저 추가한 후, Spring Fortune Cookie 라이브러리를 추가해야 합니다.
-
-```gradle
-repositories {
-    mavenLocal()  // 로컬 Maven 저장소 우선
-    mavenCentral()
-}
-
+#### Gradle
+``` groovy
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'  // Spring Boot Starter Web 추가
-    implementation 'io.github.wlsdks:spring-fortune-cookie:0.3.0-SNAPSHOT'  // 포춘 쿠키 라이브러리 추가
-
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.junit.jupiter:junit-jupiter'
-    testImplementation 'org.mockito:mockito-core'
-    testImplementation 'org.mockito:mockito-junit-jupiter'
+    implementation 'io.github.wlsdks:fortune-cookie:0.3.0'
 }
-```
+````
 
 중요사항:
+- **`spring-boot-starter-web`** 의존성을 먼저 추가하여 웹 관련 의존성(`spring-webmvc`, `jakarta.servlet-api`, `slf4j-api` 등)이 제공되도록 합니다.
+- **`fortune-cookie`** 라이브러리는 `compileOnly`로 선언된 의존성들을 `spring-boot-starter-web`에서 제공받으므로, 추가적인 설정 없이 정상적으로
+  작동합니다.
 
-- spring-boot-starter-web 의존성은 필수입니다. 이는 spring-fortune-cookie 라이브러리가 spring-webmvc, jakarta.servlet-api, slf4j-api 등을
-  compileOnly로 설정했기 때문에, 실제 런타임 시에 이 의존성들이 필요합니다.
-- **spring-fortune-cookie**는 compileOnly로 설정된 의존성들을 직접 포함하지 않고, 사용자가 spring-boot-starter-web를 통해 제공받도록 설계되었습니다.
-
-### 3) 기본 설정 (application.yml)
+### 2) 기본 설정 (application.yml)
 
 ```yaml
 fortune-cookie:
@@ -93,61 +100,6 @@ fortune-cookie:
 
 - 이렇게 설정하면, **모든 HTTP 요청**에 랜덤 포춘 메시지가 헤더와 JSON 바디에 자동 추가됩니다.
 
-### 4) 실제 사용하는 프로젝트의 `build.gradle`
-
-- 라이브러리를 실제 프로젝트에서 사용할 때는 다음과 같이 설정합니다.
-- 로컬 Maven 저장소인 `mavenLocal()`을 추가하여 라이브러리를 찾을 수 있도록 합니다. (중요합니다!)
-
-**사용자 프로젝트의 `build.gradle`:**
-
-```gradle
-plugins {
-    id 'java'
-    id 'org.springframework.boot' version '3.4.0'
-    id 'io.spring.dependency-management' version '1.1.6'
-}
-
-group = 'com.example'
-version = '0.0.1-SNAPSHOT'
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-}
-
-configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
-}
-
-repositories {
-    mavenCentral()
-    mavenLocal()  // 로컬 Maven 저장소 추가
-}
-
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'io.github.wlsdks:spring-fortune-cookie:0.3.0-SNAPSHOT'  // 포춘 쿠키 라이브러리 추가
-
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-}
-
-tasks.named('test') {
-    useJUnitPlatform()
-}
-```
-
-**중요 사항**:
-
-- **`spring-boot-starter-web`** 의존성을 먼저 추가하여 웹 관련 의존성(`spring-webmvc`, `jakarta.servlet-api`, `slf4j-api` 등)이 제공되도록 합니다.
-- **`spring-fortune-cookie`** 라이브러리는 `compileOnly`로 선언된 의존성들을 `spring-boot-starter-web`에서 제공받으므로, 추가적인 설정 없이 정상적으로
-  작동합니다.
 
 ---
 
@@ -422,5 +374,6 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 - **모드 전환 기능 추가**: `fortune`, `joke`, `quote` 등 모드별 메시지 사용
 - **미니 게임 기능 추가**: 숫자 맞히기 게임 활성화(`game-enabled`), 범위(`game-range`) 지정 가능
 - 플레이스홀더, 레어 메시지, 요일별 메시지와 함께 더욱 풍부한 사용자 경험 제공
+- 스프링 프로젝트와의 혼동성을 없애기 위해 프로젝트명에서 spring을 제거 (이미 maven central에 배포된 기존 artifact는 삭제가 힘들어서 유지하고 여기에 설명을 추가)
 
 ---
