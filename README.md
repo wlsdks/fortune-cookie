@@ -60,14 +60,14 @@
 <dependency>
     <groupId>io.github.wlsdks</groupId>
     <artifactId>fortune-cookie</artifactId>
-    <version>0.3.0</version>
+    <version>0.3.1</version>
 </dependency>
 ```
 
 #### Gradle
 ``` groovy
 dependencies {
-    implementation 'io.github.wlsdks:fortune-cookie:0.3.0'
+    implementation 'io.github.wlsdks:fortune-cookie:0.3.1'
 }
 ````
 
@@ -369,11 +369,15 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 - 1% 확률 레어 메시지 (Gamification)
 - 요일별(월/금) 메시지 로직 추가
 
-### **0.3.0-SNAPSHOT**
+### **0.3.0-SNAPSHOT (정식 배포 진행)**
 
 - **모드 전환 기능 추가**: `fortune`, `joke`, `quote` 등 모드별 메시지 사용
 - **미니 게임 기능 추가**: 숫자 맞히기 게임 활성화(`game-enabled`), 범위(`game-range`) 지정 가능
 - 플레이스홀더, 레어 메시지, 요일별 메시지와 함께 더욱 풍부한 사용자 경험 제공
 - 스프링 프로젝트와의 혼동성을 없애기 위해 프로젝트명에서 spring을 제거 (이미 maven central에 배포된 기존 artifact는 삭제가 힘들어서 유지하고 여기에 설명을 추가)
+
+### 0.3.1
+- 프로젝트에서 jar가 빌드될때 spring-fortune-cookie로 빌드되는 문제 수정 (맨 앞의 spring은 제거했기에 없어져야함)
+- 수정작업을 진행해서 이제부터는 fortune-cookie로 빌드됩니다.
 
 ---
