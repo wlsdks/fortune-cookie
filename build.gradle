@@ -1,26 +1,32 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     id 'java-library'
-    id 'maven-publish'
     id 'org.springframework.boot' version '3.3.6'
     id 'io.spring.dependency-management' version '1.1.6'
+    id 'com.vanniktech.maven.publish' version '0.30.0'
 }
 
-group = 'io.github.wlsdks'
-version = '0.3.0-SNAPSHOT'
+group = 'io.github.wlsdks' // 그룹 ID는 유지
+version = '0.3.0'
 sourceCompatibility = '21'
 
-// 라이브러리 프로젝트이므로 bootJar 비활성화
 bootJar {
-    enabled = false
+    enabled = false // Spring Boot의 실행 가능한 JAR 생성 비활성화
 }
 
 jar {
-    enabled = true
+    enabled = true // 일반 JAR 생성 활성화
 }
 
-java {
-    withSourcesJar()  // 소스 JAR 생성
-    withJavadocJar()  // Javadoc JAR 생성
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+    options.addBooleanOption('html5', true)
 }
 
 repositories {
@@ -28,7 +34,7 @@ repositories {
 }
 
 dependencies {
-    // 메인 의존성 (compileOnly)
+    // 주요 의존성
     compileOnly 'org.springframework.boot:spring-boot-autoconfigure'
     compileOnly 'jakarta.servlet:jakarta.servlet-api:6.1.0'
     compileOnly 'org.slf4j:slf4j-api:2.0.16'
@@ -42,9 +48,9 @@ dependencies {
     // Spring Boot Configuration Processor
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
-    // 테스트 의존성 (testImplementation)
+    // 테스트 의존성
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.boot:spring-boot-starter-web' // 테스트용으로만 추가
+    testImplementation 'org.springframework.boot:spring-boot-starter-web'
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
@@ -55,40 +61,36 @@ test {
     useJUnitPlatform()
 }
 
-// Maven Publish 설정
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-            versionMapping {
-                usage('java-api') {
-                    fromResolutionOf('runtimeClasspath')
-                }
-                usage('java-runtime') {
-                    fromResolutionResult()
-                }
-            }
-            pom {
-                name = 'Spring Fortune Cookie'
-                description = 'A Spring library that adds fortune messages to HTTP responses'
-                url = 'https://github.com/wlsdks/spring-fortune-cookie'
-                licenses {
-                    license {
-                        name = 'MIT License'
-                        url = 'http://www.opensource.org/licenses/mit-license.php'
-                    }
-                }
-                developers {
-                    developer {
-                        id = 'wlsdks'
-                        name = 'wlsdks'
-                        email = 'your.email@example.com'
-                    }
-                }
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL) // Maven Central 배포
+    signAllPublications() // PGP 서명 사용
+    coordinates("io.github.wlsdks", "fortune-cookie", "0.3.0") // 새로운 Artifact ID로 설정
+
+    pom {
+        name = "Fortune Cookie"
+        description = "A library that adds fortune messages to HTTP responses in Spring"
+        inceptionYear = "2024"
+        url = "https://github.com/wlsdks/fortune-cookie" // 업데이트된 GitHub URL
+
+        licenses {
+            license {
+                name = "MIT License"
+                url = "http://www.opensource.org/licenses/mit-license.php"
             }
         }
-    }
-    repositories {
-        mavenLocal()
+
+        developers {
+            developer {
+                id = "stark"
+                name = "stark"
+                email = "dig04059@gmail.com"
+            }
+        }
+
+        scm {
+            url = "https://github.com/wlsdks/fortune-cookie"
+            connection = "scm:git:git://github.com/wlsdks/fortune-cookie.git"
+            developerConnection = "scm:git:ssh://github.com/wlsdks/fortune-cookie.git"
+        }
     }
 }
