@@ -2,7 +2,6 @@ package io.github.wlsdks.fortunecookie.provider;
 
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import org.springframework.context.MessageSource;
-import org.springframework.stereotype.Component;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -13,14 +12,13 @@ import java.util.Random;
  * 포춘 메시지를 제공하는 기본 구현체입니다.
  * 포춘 메시지는 메시지 프로퍼티 파일에서 랜덤하게 가져옵니다.
  */
-@Component
 public class DefaultFortuneProvider implements FortuneProvider {
 
     private final MessageSource messageSource;
     private final FortuneCookieProperties properties;
     private final Random random;
 
-    private static final String MESSAGE_PREFIX = "fortune."; // 메시지 프로퍼티 접두어
+    private static final String MESSAGE_PREFIX = "fortune"; // 메시지 프로퍼티 접두어
 
     public DefaultFortuneProvider(MessageSource messageSource, FortuneCookieProperties properties) {
         this.messageSource = messageSource;
@@ -31,7 +29,7 @@ public class DefaultFortuneProvider implements FortuneProvider {
     /**
      * fortunes-count 설정값 범위 내에서 랜덤한 키를 생성합니다.
      *
-     * @return 생성된 포춘 메시지 키 (예: "fortune.1", "fortune.2" 등)
+     * @return 생성된 포춘 메시지 키 (예: "fortune.joke.1", "fortune.joke.2" 등)
      */
     public String generateFortuneKey() {
         // mode에 따라 prefix 결정
@@ -40,6 +38,7 @@ public class DefaultFortuneProvider implements FortuneProvider {
         // quote 모드 -> fortune.quote.*
         String mode = properties.getMode();
         String prefix = "fortune";
+
         if ("joke".equalsIgnoreCase(mode)) {
             prefix = "fortune.joke";
         } else if ("quote".equalsIgnoreCase(mode)) {
@@ -49,26 +48,24 @@ public class DefaultFortuneProvider implements FortuneProvider {
         // 0.0 <= roll < 1.0 범위의 랜덤한 double 값 생성
         double roll = random.nextDouble();
 
-
         // 1% 확률로 특별한 메시지 반환 (해당 모드에 맞춘 special 키 사용)
-        // 각 모드별로 fortune.special, fortune.joke.special, fortune.quote.special 키를 준비해둘 수 있습니다.
         if (roll < 0.01) {
-            return prefix + ".special";
+            return MESSAGE_PREFIX + ".special";
         }
 
         // 일자별로 다른 메시지 반환 (이 부분은 mode와 상관없이 특정 키 사용)
         // 만약 모드별 월요일/금요일 메시지를 다르게 하고 싶다면 prefix + ".monday" 식으로도 가능
         DayOfWeek dayOfWeek = LocalDate.now().getDayOfWeek();
         if (dayOfWeek == DayOfWeek.MONDAY) {
-            return prefix + ".monday";
+            return MESSAGE_PREFIX + ".monday";
         }
         if (dayOfWeek == DayOfWeek.FRIDAY) {
-            return prefix + ".friday";
+            return MESSAGE_PREFIX + ".friday";
         }
 
         // 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택
         int messageIndex = random.nextInt(properties.getFortunesCount()) + 1;
-        return MESSAGE_PREFIX + messageIndex;
+        return prefix + "." + messageIndex; // 수정: prefix 사용
     }
 
     /**
@@ -80,19 +77,13 @@ public class DefaultFortuneProvider implements FortuneProvider {
      */
     @Override
     public String getFortune(String fortuneKey, Locale locale) {
-        try {
-            String message = messageSource.getMessage(fortuneKey, null, locale);
-            if (message.contains("fortune")) {
-                // fortune.* 형태의 메시지가 없거나 기본 메시지가 필요한 경우
-                return messageSource.getMessage(getDefaultKeyForCurrentMode(), null,
-                        "Today is your lucky day!", locale);
-            }
-            return message;
-        } catch (Exception e) {
-            // 키가 없거나 다른 문제가 발생했을 때 기본 메시지 반환
+        String message = messageSource.getMessage(fortuneKey, null, locale);
+        if (message.equals(fortuneKey)) {
+            // 키가 존재하지 않으면 기본 메시지 반환
             return messageSource.getMessage(getDefaultKeyForCurrentMode(), null,
-                    "Today is your lucky day!", locale);
+                    "오늘은 농담이 없습니다. X-Guess 헤더를 사용하여 1에서 20 사이의 숫자를 추측하세요!", locale);
         }
+        return message;
     }
 
 
