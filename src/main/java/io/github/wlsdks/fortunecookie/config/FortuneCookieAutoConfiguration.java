@@ -82,18 +82,18 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean
     public FortuneCookieInterceptor fortuneCookieInterceptor(FortuneProvider fortuneProvider,
-                                                             FortuneCookieProperties props) {
-        // 실제 인터셉터 빈 생성
-        return new FortuneCookieInterceptor(fortuneProvider, props);
+                                                             FortuneCookieProperties props,
+                                                             MessageSource messageSource) {
+        return new FortuneCookieInterceptor(fortuneProvider, props, messageSource);
     }
 
     /**
-     * 인터셉터를 추가합니다.
+     * 인터셉터를 글로벌하게 추가합니다.
+     * 모든 요청에 대해 인터셉터가 실행되지만, 내부 로직에서 어노테이션을 검사하여 적용 여부를 결정합니다.
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Bean으로 등록된 fortuneCookieInterceptor를 추가
-        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties))
+        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties, messageSource()))
                 .addPathPatterns("/**");
     }
 
