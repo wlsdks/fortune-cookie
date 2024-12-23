@@ -1,10 +1,12 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
+import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
+import org.springframework.core.annotation.AnnotationUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -12,6 +14,11 @@ import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
 
 import java.util.HashMap;
@@ -19,21 +26,6 @@ import java.util.Map;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답에 자동으로 추가하는 ResponseBodyAdvice 구현체입니다.
- * Spring MVC의 응답 처리 과정에 개입하여 JSON 응답이나 헤더에 포춘 메시지를 추가합니다.
- * <p>
- * 주요 기능:
- * - JSON 응답 본문에 포춘 메시지 추가
- * - HTTP 헤더에 포춘 메시지 추가
- * - 다국어(i18n) 지원
- * - 설정을 통한 기능 활성화/비활성화
- * <p>
- * 설정 예시 (application.yml):
- * fortune-cookie:
- * enabled: true
- * include-header: true
- * header-name: X-Fortune-Cookie
- * include-in-response: true
- * response-fortune-name: fortune
  */
 @Slf4j
 @ControllerAdvice
@@ -57,15 +49,40 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
     /**
      * 이 Advice가 응답을 처리할지 여부를 결정합니다.
      * 포춘 쿠키 기능이 활성화되어 있고, JSON 응답인 경우에만 처리합니다.
-     *
-     * @param returnType    컨트롤러 메서드의 반환 타입
-     * @param converterType 메시지 컨버터 타입
-     * @return 응답을 처리해야 하면 true, 아니면 false
+     * 또한 @FortuneCookie 어노테이션이 적용된 경우에만 처리합니다.
      */
     @Override
     public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
-        return properties.isEnabled() && converterType.isAssignableFrom(MappingJackson2HttpMessageConverter.class);
+        if (!properties.isEnabled() ||
+                !MappingJackson2HttpMessageConverter.class.isAssignableFrom(converterType)) {
+            return false;
+        }
+
+        // 현재 요청 핸들러 가져오기
+        RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
+        if (!(requestAttributes instanceof ServletRequestAttributes)) {
+            return false;
+        }
+
+        HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
+        Object handler = request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
+
+        if (!(handler instanceof HandlerMethod)) {
+            return false;
+        }
+
+        HandlerMethod handlerMethod = (HandlerMethod) handler;
+        FortuneCookie annotation = AnnotationUtils.findAnnotation(
+                handlerMethod.getMethod(), FortuneCookie.class);
+
+        if (annotation == null) {
+            annotation = AnnotationUtils.findAnnotation(
+                    handlerMethod.getBeanType(), FortuneCookie.class);
+        }
+
+        return annotation != null;
     }
+
 
     /**
      * 응답 본문이 클라이언트로 전송되기 전에 포춘 메시지를 추가합니다.
@@ -86,8 +103,7 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
-        log.debug(">>> FortuneCookieResponseAdvice beforeBodyWrite called");
-        // 포춘 쿠키 기능이 비활성화되어 있으면 처리하지 않음
+        // JSON 응답이 아닌 경우 처리하지 않음
         if (!(body instanceof Map)) {
             return body;
         }
@@ -95,13 +111,11 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
         // Interceptor에서 저장한 바디용 포춘 메시지 읽기
         HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
         String bodyFortune = (String) servletRequest.getAttribute("fortuneBody");
-        log.debug(">>> beforeBodyWrite: bodyFortune: {}", bodyFortune);
 
         if (bodyFortune != null && properties.isIncludeInResponse()) {
             @SuppressWarnings("unchecked")
             Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
             map.put(properties.getResponseFortuneName(), bodyFortune);
-            log.debug(">>> beforeBodyWrite: fortune added to response body");
             return map;
         }
 
