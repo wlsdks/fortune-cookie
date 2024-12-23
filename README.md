@@ -28,9 +28,9 @@
 4. **커스터마이징 옵션**
     - URL 패턴 필터링(`excludePatterns`), 특정 상태 코드만 적용(`includedStatusCodes`), 에러 응답 포함(`includeOnError`)
     - 메시지 최대 길이(`maxFortuneLength`), 디버그 모드(`debug`), 커스텀 메시지 경로(`customMessagesPath`)
-5. **모드 전환 기능 (0.0.3 추가)**
+5. **모드 전환 기능 (0.3.0 추가)**
     - `fortune`, `joke`, `quote` 등 모드에 따라 다른 메시지 세트 사용 가능
-6. **미니 게임 기능 (0.0.3 추가)**
+6. **미니 게임 기능 (0.3.0 추가)**
     - 숫자 맞히기 게임을 통해 단순한 메시지 제공을 넘어 상호작용 가능
 7. **Auto-Configuration**
     - Spring Boot Starter처럼 설정 파일(`application.yml`)만 추가하면 자동 동작
@@ -60,14 +60,14 @@
 <dependency>
     <groupId>io.github.wlsdks</groupId>
     <artifactId>fortune-cookie</artifactId>
-    <version>0.3.1</version>
+    <version>0.4.0</version>
 </dependency>
 ```
 
 #### Gradle
 ``` groovy
 dependencies {
-    implementation 'io.github.wlsdks:fortune-cookie:0.3.1'
+    implementation 'io.github.wlsdks:fortune-cookie:0.4.0'
 }
 ````
 
@@ -98,8 +98,63 @@ fortune-cookie:
     userEmail: "header:X-User-Email"
 ```
 
-- 이렇게 설정하면, **모든 HTTP 요청**에 랜덤 포춘 메시지가 헤더와 JSON 바디에 자동 추가됩니다.
+- 이렇게 설정하면, 어노테이션을 사용한 특정 컨트롤러나 메서드에 랜덤 포춘 메시지가 헤더와 JSON 바디에 자동 추가됩니다.
 
+### 3) 어노테이션 사용하기 (🔥 0.0.4 버전 추가 기능)
+@FortuneCookie 어노테이션을 사용하여 원하는 컨트롤러나 메서드에 포춘 메시지 기능을 적용할 수 있습니다.
+- 어노테이션 소개
+```java
+package io.github.wlsdks.fortunecookie.annotation;
+
+import java.lang.annotation.*;
+
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+public @interface FortuneCookie {
+}
+
+```
+- 컨트롤러에 어노테이션을 적용해주시면 됩니다.
+```java
+@RequestMapping("/api")
+@RestController
+@FortuneCookie // 클래스 전체에 포춘 쿠키 적용
+public class DemoController {
+
+    @GetMapping("/hello")
+    public Map<String, String> hello() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Hello World!");
+        return response;
+    }
+
+    @GetMapping("/goodbye")
+    public Map<String, String> goodbye() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Goodbye!");
+        return response;
+    }
+
+    @GetMapping("/no-fortune")
+    public Map<String, String> noFortune() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "No Fortune Here!");
+        return response;
+    }
+}
+```
+메서드 레벨에서도 적용 가능합니다.
+- 특정 메서드에만 포춘 메시지를 추가하고 싶다면, 클래스 레벨이 아닌 메서드 레벨에 @FortuneCookie 어노테이션을 적용하세요.
+```java
+@GetMapping("/specific")
+@FortuneCookie
+public Map<String, String> specificEndpoint() {
+    Map<String, String> response = new HashMap<>();
+    response.put("message", "This endpoint has a fortune message.");
+    return response;
+}
+```
 
 ---
 
@@ -108,9 +163,9 @@ fortune-cookie:
 ### 단순 컨트롤러
 
 ```java
-
-@RestController
 @RequestMapping("/api")
+@RestController
+@FortuneCookie // 클래스 전체에 포춘 쿠키 적용
 public class DemoController {
 
     @GetMapping("/hello")
@@ -120,6 +175,7 @@ public class DemoController {
         return response;
     }
 }
+
 ```
 
 #### 응답 예시 (JSON 바디)
@@ -127,7 +183,7 @@ public class DemoController {
 ```json
 {
   "message": "Hello World!",
-  "fortune": "오늘은 행운이 가득한 날입니다!"
+  "fortune": "오늘은 행운이 가득한 날입니다! X-Guess 헤더를 사용하여 1에서 20 사이의 숫자를 추측하세요!"
 }
 ```
 
@@ -220,7 +276,7 @@ X-Guess: 7
 ```json
 {
   "message": "Hello World!",
-  "fortune": "오늘은 행운이 가득한 날입니다! Wrong guess! Try again!"
+  "fortune": "오늘은 행운이 가득한 날입니다! 잘못된 추측입니다! 다시 시도해 보세요!"
 }
 ```
 
@@ -229,7 +285,7 @@ X-Guess: 7
 ```json
 {
   "message": "Hello World!",
-  "fortune": "오늘은 행운이 가득한 날입니다! You guessed correctly! The secret number was 7."
+  "fortune": "오늘은 행운이 가득한 날입니다! 당신은 맞혔습니다! 비밀 번호는 12이었습니다."
 }
 ```
 
@@ -380,4 +436,7 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 - 프로젝트에서 jar가 빌드될때 spring-fortune-cookie로 빌드되는 문제 수정 (맨 앞의 spring은 제거했기에 없어져야함)
 - 수정작업을 진행해서 이제부터는 fortune-cookie로 빌드됩니다.
 
+### 0.4.0
+- 어노테이션 기반 포춘 메시지 적용 추가
+- @FortuneCookie 어노테이션을 통해 특정 컨트롤러나 메서드에만 포춘 메시지 기능 적용 가능
 ---
