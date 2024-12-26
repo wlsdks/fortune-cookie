@@ -2,7 +2,6 @@ package io.github.wlsdks.fortunecookie.interceptor;
 
 import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
-import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
@@ -31,18 +30,14 @@ import java.util.Map;
 @ControllerAdvice
 public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
 
-    private final FortuneProvider fortuneProvider;
     private final FortuneCookieProperties properties;
 
     /**
      * FortuneCookieResponseAdvice를 생성합니다.
      *
-     * @param fortuneProvider 포춘 메시지를 제공하는 프로바이더
-     * @param properties      포춘 쿠키 설정 정보
+     * @param properties 포춘 쿠키 설정 정보
      */
-    public FortuneCookieResponseAdvice(FortuneProvider fortuneProvider,
-                                       FortuneCookieProperties properties) {
-        this.fortuneProvider = fortuneProvider;
+    public FortuneCookieResponseAdvice(FortuneCookieProperties properties) {
         this.properties = properties;
     }
 

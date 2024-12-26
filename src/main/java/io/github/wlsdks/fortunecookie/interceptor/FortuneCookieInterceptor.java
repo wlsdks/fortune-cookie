@@ -46,13 +46,53 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request,
                              HttpServletResponse response,
                              Object handler) throws Exception {
+        // 1. 어노테이션이 없으면 인터셉터 비활성화
+        if (hasFortuneCookieAnnotation(handler)) return true;
+
+        // 2. 기능이 꺼져 있으면 인터셉터 비활성화
+        if (!properties.isEnabled()) {
+            return true;
+        }
+
+        // 3. 무작위 포춘 메시지 키 생성 (mode에 따른 키 선택은 FortuneProvider 내부 로직에 반영됨)
+        String fortuneKey = fortuneProvider.generateFortuneKey();
+
+        // 4. 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
+        String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
+        headerFortune = applyPlaceHolders(headerFortune, request);
+
+        // 5. 헤더에 포춘 쿠키 추가
+        if (properties.isIncludeHeader()) {
+            response.setHeader(properties.getHeaderName(), headerFortune);
+        }
+
+        // 6. 바디용 메시지 Request Locale로 포춘 메시지 생성
+        String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
+        bodyFortune = applyPlaceHolders(bodyFortune, request);
+
+        // 7. 미니게임 기능
+        bodyFortune = miniGame(request, bodyFortune);
+
+        // 8. 최종 바디 메시지를 request.setAttribute("fortuneBody", bodyFortune)로 저장(나중에 ResponseBodyAdvice가 꺼내 씀
+        request.setAttribute("fortuneBody", bodyFortune);
+
+        // 9. 다음 인터셉터로 요청 전달 (컨트롤러 계속 진행)
+        return true;
+    }
+
+    /**
+     * FortuneCookie 어노테이션이 있는지 확인하는 메서드
+     *
+     * @param handler : 현재 요청 핸들러
+     * @return : FortuneCookie 어노테이션이 없으면 true
+     */
+    private boolean hasFortuneCookieAnnotation(Object handler) {
         // 1. 어노테이션이 없는 경우 인터셉터 비활성화
-        if (!(handler instanceof HandlerMethod)) {
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
         }
 
         // 2. WithFortuneCookie 어노테이션 확인
-        HandlerMethod handlerMethod = (HandlerMethod) handler;
         FortuneCookie annotation = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), FortuneCookie.class);
 
         // 3. 클래스 레벨 어노테이션 확인
@@ -61,36 +101,22 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         }
 
         // 4. 어노테이션이 없으면 포춘 쿠키 기능 비활성화
-        if (annotation == null) {
-            return true;
-        }
+        return annotation == null;
+    }
 
-        // 5. 기능 비활성화이면 그냥 통과
-        if (!properties.isEnabled()) {
-            return true;
-        }
-
-        // 6. 무작위 포춘 메시지 키 생성 (mode에 따른 키 선택은 FortuneProvider 내부 로직에 반영됨)
-        String fortuneKey = fortuneProvider.generateFortuneKey();
-
-        // 7. 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
-        String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
-        headerFortune = applyPlaceHolders(headerFortune, request);
-
-        // 8. 헤더에 포춘 쿠키 추가
-        if (properties.isIncludeHeader()) {
-            response.setHeader(properties.getHeaderName(), headerFortune);
-        }
-
-        // 9. 바디용 메시지 Request Locale로 포춘 메시지 생성
-        String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
-        bodyFortune = applyPlaceHolders(bodyFortune, request);
-
-        // 10. 미니게임 기능
+    /**
+     * 미니게임 기능을 추가하는 메서드
+     *
+     * @param request     : 요청 객체
+     * @param bodyFortune : 현재 바디 메시지
+     * @return : 미니게임을 추가한 바디 메시지
+     */
+    private String miniGame(HttpServletRequest request, String bodyFortune) {
         if (properties.isGameEnabled()) {
             // 세션에서 secretNumber를 가져옴, 없으면 새로 생성
             HttpSession session = request.getSession();
             Object secretNumberObj = session.getAttribute("secretNumber");
+
             int secretNumber;
             if (secretNumberObj == null) {
                 secretNumber = random.nextInt(properties.getGameRange()) + 1;
@@ -140,11 +166,7 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                 bodyFortune += " " + guessPromptMessage;
             }
         }
-
-        // Request Attribute에 저장 (ResponseBodyAdvice에서 사용)
-        request.setAttribute("fortuneBody", bodyFortune);
-
-        return true; // 컨트롤러 계속 진행
+        return bodyFortune;
     }
 
     /**
