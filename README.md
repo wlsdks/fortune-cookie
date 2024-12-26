@@ -9,7 +9,7 @@
 > - Spring 기반의 라이브러리를 제공하기 위해 설계되었으며, 독립적으로 개발되었습니다.
 > - This library is not officially affiliated with Spring Framework/Spring Boot.
 > - It is designed to provide a library based on Spring and developed independently.
-
+> 
 > **목표**
 > - API 응답에 재미 요소(포춘 메시지)를 부가
 > - 사용자 커스터마이징과 다국어(i18n) 지원
@@ -44,7 +44,7 @@
   > - spring-fortune-cookie 아티팩트는 fortune-cookie로 이름이 변경되었으며, 더 이상 업데이트나 유지보수가 제공되지 않습니다. 
   > - Maven Central에는 기존의 spring-fortune-cookie가 남아있을테지만 사용자들은 모두 다음과 같이 의존성을 업데이트해 주시기 바랍니다. 
   > - The artifact spring-fortune-cookie has been renamed to fortune-cookie and is now deprecated. This means no further updates or maintenance will be provided for spring-fortune-cookie. Please update your dependencies to use the new artifact.
-
+>
 > 스프링 프로젝트와의 혼동 방지 설명 (Avoiding Confusion with Spring Projects):
   > - 프로젝트 이름에서 spring 접두사가 제거된 이유는 Spring Framework/Spring Boot와 공식적으로 연관된 프로젝트라는 혼동을 방지하기 위함입니다. 
   > - This change was made to avoid confusion with officially affiliated Spring Framework/Spring Boot projects.
@@ -60,14 +60,14 @@
 <dependency>
     <groupId>io.github.wlsdks</groupId>
     <artifactId>fortune-cookie</artifactId>
-    <version>0.4.0</version>
+    <version>0.4.1</version>
 </dependency>
 ```
 
 #### Gradle
 ``` groovy
 dependencies {
-    implementation 'io.github.wlsdks:fortune-cookie:0.4.0'
+    implementation 'io.github.wlsdks:fortune-cookie:0.4.1'
 }
 ````
 
@@ -160,7 +160,7 @@ public Map<String, String> specificEndpoint() {
 
 ## 📝 사용 예시
 
-### 단순 컨트롤러
+### 단순 컨트롤러 (Map 반환)
 
 ```java
 @RequestMapping("/api")
@@ -193,7 +193,41 @@ public class DemoController {
 X-Fortune-Cookie: Today is a day full of luck!
 ```
 
----
+### 0.4.1 버전: DTO 응답도 자동 지원 (FortuneWrapper)
+- 기존에는 Map 반환 시에만 “fortune” 필드가 JSON 바디에 자동 추가되었고, DTO(혹은 임의의 객체)를 반환하면 바디가 변경되지 않고 헤더(X-Fortune-Cookie)에만 메시지가 삽입되었습니다. 0.4.1부터는 ResponseBodyAdvice 수정을 통해
+  “DTO도 자동으로 fortune 필드를 포함”하도록 개선되었습니다.
+- (DTO, String, List 등) → FortuneWrapper<T>로 감싸, 최종 JSON 구조를 아래와 같이 만듭니다.
+```json
+{
+  "data": {...원본 DTO...},
+  "fortune": "메시지..."
+}
+```
+- 예를들어 이렇게 클래스를 정의하고 반환하면:
+```java
+@FortuneCookie
+@RestController
+@RequestMapping("/api")
+public class TestDtoController {
+
+    @GetMapping("/test-dto")
+    public ResponseEntity<HelloDto> testDto() {
+        HelloDto dto = new HelloDto("Hello DTO World!!!", "Some extra detail");
+        return ResponseEntity.ok(dto);
+    }
+    
+}
+```
+- 이런식으로 응답합니다.
+```json
+{
+  "data": {
+    "message": "Hello DTO World!!!",
+    "detail": "Some extra detail"
+  },
+  "fortune": "오늘은 행운이 가득한 날입니다! X-Guess 헤더를 사용하여 1에서 20 사이의 숫자를 추측하세요!"
+}
+```
 
 ## ⚙️ 설정 옵션 상세
 
@@ -439,4 +473,9 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 ### 0.4.0
 - 어노테이션 기반 포춘 메시지 적용 추가
 - @FortuneCookie 어노테이션을 통해 특정 컨트롤러나 메서드에만 포춘 메시지 기능 적용 가능
+
+### 0.4.1
+- DTO 자동 처리 로직 확장: Map이 아닌 객체를 반환해도 바디에 fortune이 포함되도록 FortuneWrapper 방식 도입
+- includeInResponse=false로 두면 헤더만 사용 (기존과 동일)
+
 ---
