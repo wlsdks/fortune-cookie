@@ -1,6 +1,7 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
 import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
+import io.github.wlsdks.fortunecookie.dto.FortuneWrapper;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import java.util.Map;
 @ControllerAdvice
 public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
 
+    public static final String FORTUNE_BODY = "fortuneBody";
     private final FortuneCookieProperties properties;
 
     /**
@@ -98,23 +100,36 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
                                   Class<? extends HttpMessageConverter<?>> selectedConverterType,
                                   ServerHttpRequest request,
                                   ServerHttpResponse response) {
-        // JSON 응답이 아닌 경우 처리하지 않음
-        if (!(body instanceof Map)) {
+        // 1. 포춘 쿠키 기능이 꺼져 있으면 처리하지 않음
+        if (!properties.isEnabled()) {
             return body;
         }
 
-        // Interceptor에서 저장한 바디용 포춘 메시지 읽기
-        HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
-        String bodyFortune = (String) servletRequest.getAttribute("fortuneBody");
+        // 2. JSON 컨버터가 아닌 경우 처리하지 않음
+        if (!MappingJackson2HttpMessageConverter.class.isAssignableFrom(selectedConverterType)) {
+            return body;
+        }
 
-        if (bodyFortune != null && properties.isIncludeInResponse()) {
+        // 3. Interceptor에서 저장한 바디용 포춘 메시지 읽기
+        HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
+        String bodyFortune = (String) servletRequest.getAttribute(FORTUNE_BODY);
+
+        // 4. 바디에 메시지 추가 기능이 꺼져 있거나, fortuneBody가 null인 경우 처리하지 않음
+        if (!properties.isIncludeInResponse() || bodyFortune == null) {
+            return body;
+        }
+
+        // 5) 만약 body가 Map이면, 기존 로직대로 "fortune" 필드 추가
+        if (body instanceof Map) {
             @SuppressWarnings("unchecked")
             Map<String, Object> map = new HashMap<>((Map<String, Object>) body);
             map.put(properties.getResponseFortuneName(), bodyFortune);
             return map;
         }
 
-        return body;
+        // 6) 그 외 타입이면, 우리가 만든 FortuneWrapper<T>로 감싸서 반환
+        //    예: FortuneWrapper<YourDto>
+        return new FortuneWrapper<>(body, bodyFortune);
     }
 
 }
