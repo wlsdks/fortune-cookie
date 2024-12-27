@@ -31,7 +31,8 @@
 5. **모드 전환 기능 (0.3.0 추가)**
     - `fortune`, `joke`, `quote` 등 모드에 따라 다른 메시지 세트 사용 가능
 6. **미니 게임 기능 (0.3.0 추가)**
-    - 숫자 맞히기 게임을 통해 단순한 메시지 제공을 넘어 상호작용 가능
+   - 숫자 맞히기(NUMBER) / 퀴즈 게임(QUIZ) 등 상호작용 가능
+   - X-Guess, X-Quiz-Answer 헤더를 통해 게임 진행
 7. **Auto-Configuration**
     - Spring Boot Starter처럼 설정 파일(`application.yml`)만 추가하면 자동 동작
 
@@ -60,14 +61,14 @@
 <dependency>
     <groupId>io.github.wlsdks</groupId>
     <artifactId>fortune-cookie</artifactId>
-    <version>0.4.1</version>
+    <version>0.5.0</version>
 </dependency>
 ```
 
 #### Gradle
 ``` groovy
 dependencies {
-    implementation 'io.github.wlsdks:fortune-cookie:0.4.1'
+    implementation 'io.github.wlsdks:fortune-cookie:0.5.0'
 }
 ````
 
@@ -87,80 +88,86 @@ fortune-cookie:
   response-fortune-name: fortune  # JSON 응답에 포함될 필드 이름
   fortunes-count: 50              # 포춘 메시지 총 개수 (기본 50)
   debug: false                    # 디버그 모드 (true 시 상세 로그)
+  mode: joke                       # (기본) fortune, joke, quote 중 선택 가능
 
-  # 추가된 설정들
-  mode: joke                       # fortune, joke, quote 중 하나 선택 가능
-  game-enabled: true               # 미니 게임 기능 활성화
-  game-range: 20                   # 숫자 추측 범위를 1~20으로 설정
-  placeholder-enabled: true        # 플레이스홀더 사용 여부
+  # 게임 기능
+  game-enabled: true              # 미니 게임 활성화
+  game-type: quiz                 # number, quiz, word (기본은 number)
+  game-range: 20                  # 숫자 추측 범위 (1~20)
+
+  # 플레이스홀더
+  placeholder-enabled: true
   placeholder-mapping:
     userName: "header:X-User-Name"
     userEmail: "header:X-User-Email"
 ```
+- 이렇게 설정하면, @FortuneCookie가 붙은 특정 컨트롤러나 메서드에 랜덤 포춘 메시지가 헤더와 JSON 바디에 자동 추가됩니다.
+- mode: joke로 설정하면 기본적으로 농담(joke) 메시지가 노출됩니다.
+- game-enabled를 true로 하고, game-type을 quiz로 설정하면 퀴즈 게임을 사용할 수 있습니다.
 
-- 이렇게 설정하면, 어노테이션을 사용한 특정 컨트롤러나 메서드에 랜덤 포춘 메시지가 헤더와 JSON 바디에 자동 추가됩니다.
+### 3) 어노테이션 사용하기 & 확장 속성 (0.5.0 신규 기능)
+- 기존에는 @FortuneCookie만 붙여도 “프로퍼티에 지정된 게임 타입, 메시지 모드”가 그대로 사용되었지만, 0.5.0부터는 어노테이션에 직접 gameType, mode, gameEnabled 등을 지정해서 메서드마다 다르게 설정할 수 있습니다.
 
-### 3) 어노테이션 사용하기 (🔥 0.0.4 버전 추가 기능)
-@FortuneCookie 어노테이션을 사용하여 원하는 컨트롤러나 메서드에 포춘 메시지 기능을 적용할 수 있습니다.
-- 어노테이션 소개
+#### 어노테이션 소개
 ```java
 package io.github.wlsdks.fortunecookie.annotation;
 
+import io.github.wlsdks.fortunecookie.properties.FortuneMode;
+import io.github.wlsdks.fortunecookie.properties.GameType;
 import java.lang.annotation.*;
 
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface FortuneCookie {
+
+    // 메서드 단위로 다른 게임 타입 지정
+    GameType gameType() default GameType.UNSPECIFIED;
+
+    // 이 컨트롤러/메서드에서만 게임 활성/비활성
+    boolean gameEnabled() default true;
+
+    // 모드(농담/명언 등)를 재정의
+    FortuneMode mode() default FortuneMode.UNSPECIFIED;
 }
 
 ```
-- 컨트롤러에 어노테이션을 적용해주시면 됩니다.
+- 컨트롤러에서 어노테이션을 적용해주시면 됩니다. (컨트롤러 또는 각 메서드)
 ```java
-@RequestMapping("/api")
 @RestController
-@FortuneCookie // 클래스 전체에 포춘 쿠키 적용
-public class DemoController {
+@RequestMapping("/api")
+public class CustomGameController {
 
-    @GetMapping("/hello")
-    public Map<String, String> hello() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Hello World!");
-        return response;
+    // 전체가 quiz로 설정되어 있지만, 여기서는 숫자 게임 사용
+    @GetMapping("/number-game")
+    @FortuneCookie(gameType = GameType.NUMBER)
+    public Map<String, String> numberGame() {
+        return Collections.singletonMap("message", "Let's play the Number Guess game!");
     }
 
-    @GetMapping("/goodbye")
-    public Map<String, String> goodbye() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Goodbye!");
-        return response;
+    // 모드도 명언(quote)로 변경
+    @GetMapping("/quote-mode")
+    @FortuneCookie(gameType = GameType.QUIZ, mode = FortuneMode.QUOTE)
+    public Map<String, String> quoteQuizGame() {
+        return Collections.singletonMap("message", "Try the Quiz with a famous quote!");
     }
 
-    @GetMapping("/no-fortune")
-    public Map<String, String> noFortune() {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "No Fortune Here!");
-        return response;
+    // 게임 자체를 꺼버리고 싶은 경우
+    @GetMapping("/no-game")
+    @FortuneCookie(gameEnabled = false)
+    public Map<String, String> noGame() {
+        return Collections.singletonMap("message", "No game for this endpoint.");
     }
 }
 ```
-메서드 레벨에서도 적용 가능합니다.
-- 특정 메서드에만 포춘 메시지를 추가하고 싶다면, 클래스 레벨이 아닌 메서드 레벨에 @FortuneCookie 어노테이션을 적용하세요.
-```java
-@GetMapping("/specific")
-@FortuneCookie
-public Map<String, String> specificEndpoint() {
-    Map<String, String> response = new HashMap<>();
-    response.put("message", "This endpoint has a fortune message.");
-    return response;
-}
-```
-
+#### 주의사항:
+- 만약 속성을 기본값인 UNSPECIFIED로 지정하면, 프로퍼티(application.yml)에서 설정한 game-type이나 mode가 사용됩니다.
+- @FortuneCookie(gameType = GameType.NUMBER)처럼 지정하면 해당 메서드에 한해 프로퍼티값을 오버라이드합니다.
 ---
 
 ## 📝 사용 예시
 
-### 단순 컨트롤러 (Map 반환)
+### 1) 단순 컨트롤러 (Map 반환)
 
 ```java
 @RequestMapping("/api")
@@ -193,17 +200,8 @@ public class DemoController {
 X-Fortune-Cookie: Today is a day full of luck!
 ```
 
-### 0.4.1 버전: DTO 응답도 자동 지원 (FortuneWrapper)
-- 기존에는 Map 반환 시에만 “fortune” 필드가 JSON 바디에 자동 추가되었고, DTO(혹은 임의의 객체)를 반환하면 바디가 변경되지 않고 헤더(X-Fortune-Cookie)에만 메시지가 삽입되었습니다. 0.4.1부터는 ResponseBodyAdvice 수정을 통해
-  “DTO도 자동으로 fortune 필드를 포함”하도록 개선되었습니다.
-- (DTO, String, List 등) → FortuneWrapper<T>로 감싸, 최종 JSON 구조를 아래와 같이 만듭니다.
-```json
-{
-  "data": {...원본 DTO...},
-  "fortune": "메시지..."
-}
-```
-- 예를들어 이렇게 클래스를 정의하고 반환하면:
+### 2) DTO 응답 (0.4.1+) - FortuneWrapper
+- 0.4.1부터는 DTO(객체) 반환도 자동 감싸기로 fortune 필드가 추가됩니다. 예:
 ```java
 @FortuneCookie
 @RestController
@@ -229,50 +227,78 @@ public class TestDtoController {
 }
 ```
 
-## ⚙️ 설정 옵션 상세
+### 3) 미니 게임: 숫자 맞히기(Guess Game), 퀴즈 게임(Quiz Game)
+- 숫자 맞히기: X-Guess 헤더로 숫자를 보내 맞추면 정답/오답 메시지가 바디에 추가됩니다.
+- 퀴즈 게임: X-Quiz-Answer 헤더에 답안을 보내서 질문을 풀 수 있습니다.
+  요청 예시 (숫자 맞히기):
 
-`application.yml`에서 `fortune-cookie` 프리픽스로 다양한 설정 변경 가능:
+#### application.yml에서 설정을 해주면 미니게임이 가능합니다.
 
-| 설정 항목                         | 타입                 | 기본값                  | 설명                                                                |
-|-------------------------------|--------------------|----------------------|-------------------------------------------------------------------|
-| `enabled`                     | boolean            | `true`               | 라이브러리 전체 활성/비활성                                                   |
-| `include-header`              | boolean            | `true`               | 응답 헤더에 포춘 메시지 포함 여부                                               |
-| `header-name`                 | String             | `"X-Fortune-Cookie"` | 포춘 메시지를 담을 헤더 이름                                                  |
-| `include-in-response`         | boolean            | `true`               | JSON 바디에 포춘 메시지 추가 여부                                             |
-| `response-fortune-name`       | String             | `"fortune"`          | JSON 바디에 추가될 필드 이름                                                |
-| `includedStatusCodes`         | Set<Integer>       | 빈 Set (`[]`)         | 특정 상태 코드에만 메시지 삽입 (비어있으면 모든 상태 코드)                                |
-| `excludePatterns`             | Set<String>        | 빈 Set (`[]`)         | 특정 URL 패턴을 포춘 메시지에서 제외                                            |
-| `includeOnError`              | boolean            | `true`               | 에러 응답에도 메시지를 포함할지                                                 |
-| `maxFortuneLength`            | int                | `0`                  | 메시지 최대 길이 (0 = 무제한)                                               |
-| `debug`                       | boolean            | `false`              | 디버그 모드 (true면 메시지 생성/치환 로깅 등 상세 출력)                               |
-| `customMessagesPath`          | String             | `""` (빈 문자열)         | 사용자 정의 메시지 파일 경로                                                  |
-| `fortunesCount`               | int                | `50`                 | 메시지 총 개수 (기본 fortunes 파일에서 1~50 인덱스)                              |
-| **`placeholder-enabled`**     | boolean            | `false`              | 플레이스홀더 치환 기능 활성화 (true 시 `{userName}` 등 치환)                       |
-| **`placeholder-mapping`**     | Map<String,String> | 빈 맵 (`{}`)           | `{플레이스홀더명}: "header:X-User-Name"` 식으로 치환 규칙 정의 (header/session 등) |
-| **`mode`** (0.0.3 추가)         | String             | `"fortune"`          | 메시지 모드 설정: `fortune`, `joke`, `quote` 중 하나 선택 가능                  |
-| **`game-enabled`** (0.0.3 추가) | boolean            | `false`              | 미니 게임 기능 활성화 (true 시 숫자 맞히기 게임 실행)                                |
-| **`game-range`** (0.0.3 추가)   | int                | `10`                 | 미니 게임 숫자 범위 (1~game-range 사이의 숫자 추측)                              |
-
----
-
-## 🔥 0.0.3 버전 추가 기능
-
-### 1) 모드 전환 기능
-
-`mode` 프로퍼티를 통해 메시지 모드를 변경할 수 있습니다.
-
-- `fortune` (기본): 기존 포춘 메시지
-- `joke`: 농담 메시지(`fortune.joke.*`) 사용
-- `quote`: 명언 메시지(`fortune.quote.*`) 사용
+- `game-enabled`를 true로 설정하면, 간단한 숫자 맞히기 게임을 즐길 수 있습니다.  
+- `game-range`로 추측 범위를 지정할 수 있으며, 기본값은 10입니다. (number에서만 사용 가능)
+- `game-type`을 quiz로 설정하면 퀴즈 게임을 즐길 수 있습니다. `number`, `quiz` 중 선택 가능합니다.
 
 **application.yml 예시:**
 
 ```yaml
 fortune-cookie:
-  mode: joke   # joke 모드 설정
+  game-enabled: true
+  game-range: 20
+  game-type: quiz
+  # 또는 game-type: number
+```
+- 또는 어노테이션을 사용하여 설정 가능:
+```java
+@FortuneCookie(gameEnabled = true, gameType = GameType.NUMBER)
+// 또는
+@FortuneCookie(gameEnabled = true, gameType = GameType.QUIZ)
 ```
 
-메시지 파일 예시(`fortunes_en.properties`):
+- 요청 예시 (숫자 맞히기):
+```http
+GET /api/hello
+X-Guess: 12
+```
+- 응답 예시 (맞춘 경우):
+```json
+{
+  "message": "Hello World!",
+  "fortune": "오늘은 행운이 가득한 날입니다! 정답입니다! 정답은 12 였습니다."
+}
+```
+- 요청 예시 (퀴즈 게임):
+```http
+GET /api/hello
+X-Quiz-Answer: 4
+```
+- 응답 예시 (틀린 경우):
+```json
+{
+  "message": "Hello World!",
+  "fortune": "오늘은 행운이 가득한 날입니다! 오답입니다! 다시 시도해 보세요."
+}
+```
+(디폴트는 영어 메시지로도 출력 가능, 헤더(X-Fortune-Cookie)는 항상 영어 문구로 나오도록 설정되어 있음: 한글 사용시 오류)
+
+### 4) 포춘 메시지 모드 전환 기능 (기본, 농담, 명언)
+
+`@FortuneCookie` 어노테이션의 `mode` 프로퍼티를 통해 메시지 모드를 변경할 수 있습니다.
+- `fortune` (기본): 기존 포춘 메시지
+- `joke`: 농담 메시지(`fortune.joke.*`) 사용
+- `quote`: 명언 메시지(`fortune.quote.*`) 사용
+
+**application.yml 작성 예시:**
+
+```yaml
+fortune-cookie:
+  mode: joke   # joke 모드 설정
+```
+- 또는 어노테이션을 사용하여 설정 가능:
+```java
+@FortuneCookie(mode = FortuneMode.JOKE)
+```
+
+- 메시지 파일 예시(`fortunes_en.properties`):
 
 ```properties
 fortune.joke.1=Why don’t programmers like nature? Because it has too many bugs.
@@ -282,50 +308,8 @@ fortune.joke.default=No jokes for you today.
 
 이렇게 설정하면 호출할 때마다 농담 메시지가 랜덤하게 나타납니다.
 
-### 2) 미니 게임 기능
 
-`game-enabled`를 true로 설정하면, 간단한 숫자 맞히기 게임을 즐길 수 있습니다.  
-`game-range`로 추측 범위를 지정할 수 있으며, 기본값은 10입니다.
-
-사용자가 요청 시 `X-Guess` 헤더를 보내 숫자를 추측하면, 맞추면 축하 메시지를, 틀리면 재도전 메시지를 응답 바디에 추가합니다.  
-`X-Guess` 헤더 없이 요청하면 안내 메시지가 표시됩니다.
-
-**application.yml 예시:**
-
-```yaml
-fortune-cookie:
-  game-enabled: true
-  game-range: 20
-```
-
-**요청 예시:**
-
-```http
-GET /api/hello
-X-Guess: 7
-```
-
-**응답 예시 (틀린 경우):**
-
-```json
-{
-  "message": "Hello World!",
-  "fortune": "오늘은 행운이 가득한 날입니다! 잘못된 추측입니다! 다시 시도해 보세요!"
-}
-```
-
-맞추면:
-
-```json
-{
-  "message": "Hello World!",
-  "fortune": "오늘은 행운이 가득한 날입니다! 당신은 맞혔습니다! 비밀 번호는 12이었습니다."
-}
-```
-
----
-
-## 플레이스홀더(Placeholder) 기능
+### 5) 플레이스홀더(Placeholder) 기능
 
 `{userName}`, `{today}` 등 런타임 변수를 메시지 안에서 치환하려면 다음 옵션들을 추가할 수 있습니다:
 
@@ -367,19 +351,43 @@ X-User-Email: tony@stark.com
 
 ---
 
-## 🔧 커스터마이징
+## ⚙️ 설정 옵션 상세
+
+`application.yml`에서 `fortune-cookie` 프리픽스로 다양한 설정 변경 가능:
+
+| 설정 항목                     | 타입                 | 기본값                | 설명                                                                |
+|---------------------------|--------------------|--------------------|-------------------------------------------------------------------|
+| `enabled`                 | boolean            | `true`             | 라이브러리 전체 활성/비활성                                                   |
+| `include-header`          | boolean            | `true`             | 응답 헤더에 포춘 메시지 포함 여부                                               |
+| `header-name`             | String             | `"X-Fortune-Cookie"` | 포춘 메시지를 담을 헤더 이름                                                  |
+| `include-in-response`     | boolean            | `true`             | JSON 바디에 포춘 메시지 추가 여부                                             |
+| `response-fortune-name`   | String             | `"fortune"`        | JSON 바디에 추가될 필드 이름                                                |
+| `includedStatusCodes`     | Set<Integer>       | 빈 Set (`[]`)       | 특정 상태 코드에만 메시지 삽입 (비어있으면 모든 상태 코드)                                |
+| `excludePatterns`         | Set<String>        | 빈 Set (`[]`)       | 특정 URL 패턴을 포춘 메시지에서 제외                                            |
+| `includeOnError`          | boolean            | `true`             | 에러 응답에도 메시지를 포함할지                                                 |
+| `maxFortuneLength`        | int                | `0`                | 메시지 최대 길이 (0 = 무제한)                                               |
+| `debug`                   | boolean            | `false`            | 디버그 모드 (true면 메시지 생성/치환 로깅 등 상세 출력)                               |
+| `customMessagesPath`      | String             | `""` (빈 문자열)       | 사용자 정의 메시지 파일 경로                                                  |
+| `fortunesCount`           | int                | `50`               | 메시지 총 개수 (기본 fortunes 파일에서 1~50 인덱스)                              |
+| **`placeholder-enabled`** | boolean            | `false`            | 플레이스홀더 치환 기능 활성화 (true 시 `{userName}` 등 치환)                       |
+| **`placeholder-mapping`** | Map<String,String> | 빈 맵 (`{}`)         | `{플레이스홀더명}: "header:X-User-Name"` 식으로 치환 규칙 정의 (header/session 등) |
+| **`mode`**                | enum               | `fortune`          | 메시지 모드 설정: `fortune`, `joke`, `quote` 중 하나 선택 가능                  |
+| **`game-enabled`**        | boolean            | `false`            | 미니 게임 기능 활성화 (true 시 숫자 맞히기 게임 실행)                                |
+| **`game-type`**           | enum               | `number`           | 숫자 맞히기 `number`, 퀴즈 `quiz` 등 선택 가능                                |
+| **`game-range`**          | int                | `10`               | 미니 게임 숫자 범위 (1~game-range 사이의 숫자 추측)                              |
+
+---
+
+## 🔧 커스터마이징 기능
 
 ### 1. 메시지 파일 오버라이딩
 
-사용하는 프로젝트에서 메시지 파일을 커스터마이징하면, 라이브러리보다 우선하여 적용됩니다:
-
+- 포춘쿠키를 사용하는 프로젝트에서 메시지 파일을 커스터마이징하면, 라이브러리보다 우선하여 적용됩니다.
 ```
 src/main/resources/fortunes/fortunes_ko.properties
 src/main/resources/fortunes/fortunes_en.properties
 ```
-
-예시:
-
+- 예시
 ```properties
 fortune.1=우리 회사만의 특별한 메시지1
 fortune.2=우리 회사만의 특별한 메시지2
@@ -389,17 +397,14 @@ fortune.5=우리 회사만의 특별한 메시지5
 fortune.default=우리 회사의 기본 메시지입니다
 fortune.special=와.. 이게 당첨된다고?? 1% 확률로 나오는 메시지입니다.
 ```
-
-`application.yml`에서 메시지 수 설정:
-
+- `application.yml`에서 메시지 수 설정:
 ```yaml
 fortune-cookie:
   fortunes-count: 5
 ```
-
 ### 2) 커스텀 FortuneProvider
 
-`FortuneProvider` 인터페이스를 구현하면 DB나 외부 API에서 메시지를 가져올 수도 있습니다:
+- `FortuneProvider` 인터페이스를 구현하면 DB나 외부 API에서 메시지를 가져올 수도 있습니다.
 
 ```java
 
@@ -419,7 +424,7 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 }
 ```
 
-`@ConditionalOnMissingBean(FortuneProvider.class)` 덕분에 새 Provider가 등록되면 `DefaultFortuneProvider` 대신 사용됩니다.
+- `@ConditionalOnMissingBean(FortuneProvider.class)` 덕분에 새 Provider가 등록되면 `DefaultFortuneProvider` 대신 사용됩니다.
 
 ---
 
@@ -478,4 +483,11 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 - DTO 자동 처리 로직 확장: Map이 아닌 객체를 반환해도 바디에 fortune이 포함되도록 FortuneWrapper 방식 도입
 - includeInResponse=false로 두면 헤더만 사용 (기존과 동일)
 
+### 0.5.0 (현재 최신)
+- 어노테이션 속성 확장: @FortuneCookie(gameType, mode, gameEnabled)
+- 프로퍼티 기본값과 별개로, 컨트롤러/메서드마다 게임 타입(숫자·퀴즈 등)과 모드를 오버라이드 가능
+- 퀴즈 게임(QuizGame) 정식 지원: game-type=quiz / X-Quiz-Answer 헤더 처리
+- “어노테이션 설정값”과 “프로퍼티 설정값” 간 우선순위 로직 추가 
+  - 어노테이션 값 > 프로퍼티 값
+  - 모드/게임 타입/게임 활성 여부를 유연하게 적용
 ---
