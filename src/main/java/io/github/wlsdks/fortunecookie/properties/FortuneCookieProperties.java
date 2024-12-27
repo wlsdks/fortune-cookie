@@ -65,4 +65,7 @@ public class FortuneCookieProperties {
     // 미니 게임에서 사용할 숫자 범위 (1 ~ gameRange 사이의 숫자를 맞히도록)
     private int gameRange = 10;
 
+    // 미니 게임 타입 (NUMBER: 숫자 맞히기, QUIZ: 퀴즈)
+    private GameType gameType = GameType.NUMBER;
+
 }
