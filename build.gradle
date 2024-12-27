@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'io.github.wlsdks'
-version = '0.4.0'
+version = '0.5.0'
 sourceCompatibility = '21'
 archivesBaseName = 'fortune-cookie' // JAR 파일 이름 설정
 
@@ -69,7 +69,7 @@ test {
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)         // Maven Central 배포
     signAllPublications()                                      // PGP 서명 사용
-    coordinates("io.github.wlsdks", "fortune-cookie", "0.4.0") // 새로운 Artifact ID로 설정
+    coordinates("io.github.wlsdks", "fortune-cookie", "0.5.0") // 새로운 Artifact ID로 설정
 
     pom {
         name = "Fortune Cookie"
@@ -115,9 +115,9 @@ publishing {
                 }
             }
             pom {
-                name = 'Spring Fortune Cookie'
+                name = 'Fortune Cookie'
                 description = 'A Spring library that adds fortune messages to HTTP responses'
-                url = 'https://github.com/wlsdks/spring-fortune-cookie'
+                url = 'https://github.com/wlsdks/fortune-cookie'
                 licenses {
                     license {
                         name = 'MIT License'
@@ -128,7 +128,7 @@ publishing {
                     developer {
                         id = 'wlsdks'
                         name = 'wlsdks'
-                        email = 'your.email@example.com'
+                        email = 'dig04058@gmail.com'
                     }
                 }
             }
@@ -137,4 +137,5 @@ publishing {
     repositories {
         mavenLocal()
     }
-}*/
+}
+*/
