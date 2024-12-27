@@ -1,5 +1,8 @@
 package io.github.wlsdks.fortunecookie.annotation;
 
+import io.github.wlsdks.fortunecookie.properties.FortuneMode;
+import io.github.wlsdks.fortunecookie.properties.GameType;
+
 import java.lang.annotation.*;
 
 /**
@@ -9,4 +12,14 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface FortuneCookie {
+
+    // 이 메서드에만 다른 gameType을 쓸 수 있도록
+    GameType gameType() default GameType.UNSPECIFIED;
+
+    // 게임을 아예 비활성화
+    boolean gameEnabled() default true;
+
+    // 다른 모드
+    FortuneMode mode() default FortuneMode.UNSPECIFIED;
+
 }
