@@ -31,28 +31,28 @@ public class DefaultFortuneProvider implements FortuneProvider {
      *
      * @return 생성된 포춘 메시지 키 (예: "fortune.joke.1", "fortune.joke.2" 등)
      */
-    public String generateFortuneKey() {
-        // 기본값 가져오기
-        FortuneMode fortuneMode = properties.getMode();
-        String prefix = Constant.MESSAGE_PREFIX; // 기본 prefix (fortune)
+    public String generateFortuneKey(FortuneMode requestedMode) {
+        // 1) requestedMode가 UNSPECIFIED면, properties.getMode() 사용
+        FortuneMode finalMode = requestedMode == FortuneMode.UNSPECIFIED
+                ? properties.getMode()
+                : requestedMode;
 
-        // mode에 따라 prefix 변경
-        if (FortuneMode.JOKE.equals(fortuneMode)) {
+        // 2) finalMode에 따라 prefix 정하기
+        String prefix = Constant.MESSAGE_PREFIX;
+        if (FortuneMode.JOKE.equals(finalMode)) {
             prefix = Constant.JOKE_MESSAGE;
         }
-        if (FortuneMode.QUOTE.equals(fortuneMode)) {
+        if (FortuneMode.QUOTE.equals(finalMode)) {
             prefix = Constant.QUOTE_MESSAGE;
         }
 
-        // 0.0 <= roll < 1.0 범위의 랜덤한 double 값 생성
+        // 3) 0.0 <= roll < 1.0 범위의 랜덤한 double 값 생성 (1% 확률로 특별한 메시지 반환 (해당 모드에 맞춘 special 키 사용))
         double roll = random.nextDouble();
-
-        // 1% 확률로 특별한 메시지 반환 (해당 모드에 맞춘 special 키 사용)
         if (roll < 0.01) {
             return Constant.SPECIAL_MESSAGE;
         }
 
-        // 특수한 일자에는 다른 메시지 반환 (이 부분은 mode와 상관없이 특정 키 사용)
+        // 4) 특수한 일자에는 다른 메시지 반환 (이 부분은 mode와 상관없이 특정 키 사용)
         DayOfWeek dayOfWeek = LocalDate.now().getDayOfWeek();
         if (dayOfWeek == DayOfWeek.MONDAY) {
             return Constant.MONDAY_MESSAGE;
@@ -61,7 +61,7 @@ public class DefaultFortuneProvider implements FortuneProvider {
             return Constant.FRIDAY_MESSAGE;
         }
 
-        // 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택
+        // 5) 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택
         int messageIndex = random.nextInt(properties.getFortunesCount()) + 1;
         return prefix + "." + messageIndex; // 수정: prefix 사용
     }

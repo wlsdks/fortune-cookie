@@ -2,6 +2,7 @@ package io.github.wlsdks.fortunecookie.properties;
 
 public enum FortuneMode {
 
+    UNSPECIFIED("unspecified", "미지정"),
     FORTUNE("fortune", "포춘 모드(기본)"),
     JOKE("joke", "농담 모드"),
     QUOTE("quote", "명언 모드");

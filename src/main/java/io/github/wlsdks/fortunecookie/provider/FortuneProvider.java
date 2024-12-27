@@ -1,5 +1,7 @@
 package io.github.wlsdks.fortunecookie.provider;
 
+import io.github.wlsdks.fortunecookie.properties.FortuneMode;
+
 import java.util.Locale;
 
 /**
@@ -12,7 +14,7 @@ public interface FortuneProvider {
      *
      * @return 포춘 메시지 키
      */
-    String generateFortuneKey();
+    String generateFortuneKey(FortuneMode mode);
 
     /**
      * 포춘 메시지를 키와 로케일 기반으로 가져옵니다.
