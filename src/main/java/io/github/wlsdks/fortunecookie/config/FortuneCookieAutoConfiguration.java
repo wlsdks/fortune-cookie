@@ -2,6 +2,8 @@ package io.github.wlsdks.fortunecookie.config;
 
 import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieInterceptor;
 import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieResponseAdvice;
+import io.github.wlsdks.fortunecookie.interceptor.module.GameModule;
+import io.github.wlsdks.fortunecookie.interceptor.module.impl.NumberGuessGame;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.DefaultFortuneProvider;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
@@ -14,6 +16,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * 포춘 쿠키 라이브러리의 자동 설정을 담당하는 클래스입니다.
@@ -81,7 +87,11 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     public FortuneCookieInterceptor fortuneCookieInterceptor(FortuneProvider fortuneProvider,
                                                              FortuneCookieProperties props,
                                                              MessageSource messageSource) {
-        return new FortuneCookieInterceptor(fortuneProvider, props, messageSource);
+        // 게임 모듈 리스트
+        List<GameModule> gameModuleList = new ArrayList<>(List.of());
+        // 숫자 맞추기 게임 추가
+        gameModuleList.add(new NumberGuessGame(properties, messageSource(), new Random()));
+        return new FortuneCookieInterceptor(fortuneProvider, props, messageSource, gameModuleList);
     }
 
     /**
