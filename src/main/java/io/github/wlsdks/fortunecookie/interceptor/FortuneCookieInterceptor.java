@@ -1,7 +1,11 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
 import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
+import io.github.wlsdks.fortunecookie.interceptor.module.GameModule;
+import io.github.wlsdks.fortunecookie.interceptor.module.impl.NumberGuessGame;
+import io.github.wlsdks.fortunecookie.interceptor.module.impl.QuizGame;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
+import io.github.wlsdks.fortunecookie.properties.GameType;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -13,9 +17,10 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답 헤더에 추가하는 인터셉터입니다.
@@ -25,16 +30,28 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
 
     private final FortuneProvider fortuneProvider;
     private final FortuneCookieProperties properties;
-    private final Random random;
     private final MessageSource messageSource;
+    private final Map<String, GameModule> gameModuleMap;
 
     public FortuneCookieInterceptor(FortuneProvider fortuneProvider,
                                     FortuneCookieProperties properties,
-                                    MessageSource messageSource) {
+                                    MessageSource messageSource,
+                                    List<GameModule> gameModuleList) {
         this.fortuneProvider = fortuneProvider;
         this.properties = properties;
-        this.random = new Random();
         this.messageSource = messageSource;
+        this.gameModuleMap = new HashMap<>();
+
+        // 게임 모듈을 맵에 넣어둠
+        gameModuleList.forEach(gameModule -> {
+            if (gameModule instanceof NumberGuessGame numberGuessGame) {
+                gameModuleMap.put("number", numberGuessGame);
+            }
+            if (gameModule instanceof QuizGame quizGame) {
+                gameModuleMap.put("quiz", quizGame);
+            }
+            // 추가적으로 게임 모듈을 넣을수 있음
+        });
     }
 
     /**
@@ -48,35 +65,41 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                              Object handler) throws Exception {
         // 1. 어노테이션이 없으면 인터셉터 비활성화
         if (hasFortuneCookieAnnotation(handler)) return true;
-
         // 2. 기능이 꺼져 있으면 인터셉터 비활성화
-        if (!properties.isEnabled()) {
-            return true;
-        }
+        if (!properties.isEnabled()) return true;
 
         // 3. 무작위 포춘 메시지 키 생성 (mode에 따른 키 선택은 FortuneProvider 내부 로직에 반영됨)
         String fortuneKey = fortuneProvider.generateFortuneKey();
-
         // 4. 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
         String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
-        headerFortune = applyPlaceHolders(headerFortune, request);
+        // 5. 바디용 메시지 Request Locale로 포춘 메시지 생성
+        String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
 
-        // 5. 헤더에 포춘 쿠키 추가
+        // 6. 헤더에 포춘 쿠키 추가
+        headerFortune = applyPlaceHolders(headerFortune, request);
         if (properties.isIncludeHeader()) {
             response.setHeader(properties.getHeaderName(), headerFortune);
         }
 
-        // 6. 바디용 메시지 Request Locale로 포춘 메시지 생성
-        String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
+        // 7. 바디 메시지에 placeHolder 적용
         bodyFortune = applyPlaceHolders(bodyFortune, request);
 
-        // 7. 미니게임 기능
-        bodyFortune = miniGame(request, bodyFortune);
+        // 8. 게임 모듈이 활성화되어 있으면 처리
+        if (properties.isGameEnabled()) {
+            // gameType: "number", "quiz", 등
+            GameType gameType = properties.getGameType();
+            GameModule gameModule = gameModuleMap.get(gameType.getType());
 
-        // 8. 최종 바디 메시지를 request.setAttribute("fortuneBody", bodyFortune)로 저장(나중에 ResponseBodyAdvice가 꺼내 씀
+            // 게임 모듈이 있으면 처리
+            if (gameModule != null) {
+                bodyFortune = gameModule.processGame(request, bodyFortune);
+            }
+        }
+
+        // 9. 최종 바디 메시지를 request.setAttribute("fortuneBody", bodyFortune)로 저장(나중에 ResponseBodyAdvice가 꺼내 씀
         request.setAttribute("fortuneBody", bodyFortune);
 
-        // 9. 다음 인터셉터로 요청 전달 (컨트롤러 계속 진행)
+        // 10. 다음 인터셉터로 요청 전달 (컨트롤러 계속 진행)
         return true;
     }
 
@@ -102,71 +125,6 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
 
         // 4. 어노테이션이 없으면 포춘 쿠키 기능 비활성화
         return annotation == null;
-    }
-
-    /**
-     * 미니게임 기능을 추가하는 메서드
-     *
-     * @param request     : 요청 객체
-     * @param bodyFortune : 현재 바디 메시지
-     * @return : 미니게임을 추가한 바디 메시지
-     */
-    private String miniGame(HttpServletRequest request, String bodyFortune) {
-        if (properties.isGameEnabled()) {
-            // 세션에서 secretNumber를 가져옴, 없으면 새로 생성
-            HttpSession session = request.getSession();
-            Object secretNumberObj = session.getAttribute("secretNumber");
-
-            int secretNumber;
-            if (secretNumberObj == null) {
-                secretNumber = random.nextInt(properties.getGameRange()) + 1;
-                session.setAttribute("secretNumber", secretNumber);
-            } else {
-                secretNumber = (int) secretNumberObj;
-            }
-
-            // 클라이언트에서 X-Guess 헤더로 추측 값을 전달받음
-            String guessHeader = request.getHeader("X-Guess");
-            if (guessHeader != null) {
-                try {
-                    int guess = Integer.parseInt(guessHeader);
-                    if (guess == secretNumber) {
-                        String successMessage = messageSource.getMessage(
-                                "game.guessed_correctly",
-                                new Object[]{secretNumber},
-                                request.getLocale()
-                        );
-                        bodyFortune += " " + successMessage;
-                        // 다음 라운드를 위해 새로운 숫자 생성
-                        secretNumber = random.nextInt(properties.getGameRange()) + 1;
-                        session.setAttribute("secretNumber", secretNumber);
-                    } else {
-                        String wrongGuessMessage = messageSource.getMessage(
-                                "game.wrong_guess",
-                                null,
-                                request.getLocale()
-                        );
-                        bodyFortune += " " + wrongGuessMessage;
-                    }
-                } catch (NumberFormatException e) {
-                    String invalidFormatMessage = messageSource.getMessage(
-                            "game.invalid_guess",
-                            null,
-                            request.getLocale()
-                    );
-                    bodyFortune += " " + invalidFormatMessage;
-                }
-            } else {
-                // 추측 헤더가 없으면 게임 안내 메시지
-                String guessPromptMessage = messageSource.getMessage(
-                        "game.guess_prompt",
-                        new Object[]{properties.getGameRange()},
-                        request.getLocale()
-                );
-                bodyFortune += " " + guessPromptMessage;
-            }
-        }
-        return bodyFortune;
     }
 
     /**
