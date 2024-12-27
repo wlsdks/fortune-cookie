@@ -85,13 +85,12 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     @Bean
     @ConditionalOnMissingBean
     public FortuneCookieInterceptor fortuneCookieInterceptor(FortuneProvider fortuneProvider,
-                                                             FortuneCookieProperties props,
-                                                             MessageSource messageSource) {
+                                                             FortuneCookieProperties props) {
         // 게임 모듈 리스트
         List<GameModule> gameModuleList = new ArrayList<>(List.of());
         // 숫자 맞추기 게임 추가
         gameModuleList.add(new NumberGuessGame(properties, messageSource(), new Random()));
-        return new FortuneCookieInterceptor(fortuneProvider, props, messageSource, gameModuleList);
+        return new FortuneCookieInterceptor(fortuneProvider, props, gameModuleList);
     }
 
     /**
@@ -100,7 +99,7 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties, messageSource()))
+        registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties))
                 .addPathPatterns("/**");
     }
 
