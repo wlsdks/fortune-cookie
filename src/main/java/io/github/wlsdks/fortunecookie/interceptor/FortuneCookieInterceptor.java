@@ -81,13 +81,13 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         FortuneMode finalMode = getFortuneMode(annotation);
         String fortuneKey = fortuneProvider.generateFortuneKey(finalMode);
 
-        // 4. 헤더용 메시지는 항상 영어로
+        // 4. 헤더용 메시지는 항상 영어로 (한글 오류가 발생할 수 있음)
         String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
 
-        // 5. 바디용 메시지는 요청 로케일
+        // 5. 바디용 메시지는 요청 로케일로 가져옴
         String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
 
-        // 6. 헤더에 포춘 쿠키 추가(플레이스홀더 치환 포함)
+        // 6. 헤더에 포춘 쿠키 추가 (placeHolder 치환 포함)
         headerFortune = applyPlaceHolders(headerFortune, request);
         if (properties.isIncludeHeader()) {
             response.setHeader(properties.getHeaderName(), headerFortune);
@@ -96,10 +96,10 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         // 7. 바디 메시지에 placeHolder 적용
         bodyFortune = applyPlaceHolders(bodyFortune, request);
 
-        // 8. 게임 모듈이 활성화되어 있으면, 어노테이션에 적힌 gameType을 우선 적용
-        bodyFortune = applyGame(request, annotation, bodyFortune);
+        // 8. 미니게임 적용: 게임 모듈이 활성화되어 있으면, 어노테이션에 적힌 gameType(number, quiz)을 우선 적용
+        bodyFortune = applyMiniGame(request, annotation, bodyFortune);
 
-        // 9. 최종 바디 메시지를 request에 저장 (ResponseBodyAdvice가 참조함)
+        // 9. 완성된 최종 바디 메시지를 request에 저장 (ResponseBodyAdvice가 참조함)
         request.setAttribute(Constant.FORTUNE_BODY, bodyFortune);
 
         // 10. 다음 인터셉터 혹은 컨트롤러로 진행
@@ -151,18 +151,20 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * @return : FortuneCookie 어노테이션 또는 null
      */
     private FortuneCookie getFortuneCookieAnnotation(Object handler) {
+        // 1. 핸들러가 HandlerMethod가 아니면 null 리턴
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return null;
         }
 
-        // 1) 메서드 레벨 어노테이션 확인
+        // 2. 메서드 레벨 어노테이션 확인
         FortuneCookie annotation = AnnotationUtils.findAnnotation(handlerMethod.getMethod(), FortuneCookie.class);
 
-        // 2) 클래스 레벨 어노테이션 확인
+        // 3. 클래스 레벨 어노테이션 확인
         if (annotation == null) {
             annotation = AnnotationUtils.findAnnotation(handlerMethod.getBeanType(), FortuneCookie.class);
         }
 
+        // 4. FortuneCookie 어노테이션 리턴
         return annotation;
     }
 
@@ -173,15 +175,13 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * @return : 최종 모드
      */
     private FortuneMode getFortuneMode(FortuneCookie annotation) {
-        FortuneMode finalMode;
-
+        // 만약 어노테이션에 명시되지 않았으면 프로퍼티 기본값 사용 (yml 등 설정)
         if (annotation.mode() == FortuneMode.UNSPECIFIED) {
-            finalMode = properties.getMode(); // yml 등 설정
-        } else {
-            finalMode = annotation.mode();    // 어노테이션에 지정된 모드
+            return properties.getMode();
         }
 
-        return finalMode;
+        // 어노테이션에 명시되어 있으면 그것을 사용
+        return annotation.mode();
     }
 
     /**
@@ -191,53 +191,63 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * @param request         : 현재 요청
      * @return : 치환된 메시지
      */
-    private String applyPlaceHolders(String originalMessage, HttpServletRequest request) {
-        // placeholderEnabled가 꺼져 있으면 그냥 원본 메시지 리턴
+    private String applyPlaceHolders(String originalMessage,
+                                     HttpServletRequest request) {
+        // 1. placeholderEnabled가 꺼져 있으면 그냥 원본 메시지 리턴
         if (!properties.isPlaceholderEnabled()) {
             return originalMessage;
         }
 
-        // 실제 치환 로직
+        // 2. 실제 치환 로직
         String result = originalMessage;
         for (Map.Entry<String, String> entry : properties.getPlaceholderMapping().entrySet()) {
+            // 2-1. e.g. entry = "userName" : "header:X-User-Name" 에서 key, value를 가져옴
             String placeholderKey = entry.getKey();      // e.g. "userName"
             String mappingSpec = entry.getValue();       // e.g. "header:X-User-Name"
             String placeholderPattern = "{" + placeholderKey + "}";
 
+            // 2-2. 메시지에 placeholder가 없으면 다음으로
             if (!result.contains(placeholderPattern)) {
                 continue;
             }
 
+            // 2-3. placeholder에 해당하는 값을 가져와서 치환
             String resolvedValue = resolvePlaceholderValue(mappingSpec, request);
+
+            // 2-4. 치환된 값이 없으면 GUEST로 대체
             result = result.replace(placeholderPattern, Objects.requireNonNullElse(resolvedValue, Constant.GUEST));
         }
+
+        // 3. 치환된 메시지 리턴
         return result;
     }
 
     /**
-     * applyGame : 게임 모듈을 적용하는 메서드
+     * applyMiniGame : 게임 모듈을 적용하는 메서드 (숫자 맞히기, 퀴즈 등)
      *
      * @param request     : 현재 요청
      * @param annotation  : FortuneCookie 어노테이션
      * @param bodyFortune : 현재까지 만들어진 포춘 메시지
      * @return : 게임 결과가 반영된 새로운 메시지
      */
-    private String applyGame(HttpServletRequest request,
-                             FortuneCookie annotation,
-                             String bodyFortune) {
-        //    어노테이션이 없으면 properties.getGameType() 사용
+    private String applyMiniGame(HttpServletRequest request,
+                                 FortuneCookie annotation,
+                                 String bodyFortune) {
+        // 1. 미니게임이 켜져있다면 실행
         if (properties.isGameEnabled()) {
             GameType finalGameType;
 
-            // 어노테이션에 gameType이 명시되어 있으면 그것을 사용, 아니면 프로퍼티 기본값 사용
+            // 2. 어노테이션에 gameType이 명시되어 있으면 그것을 사용, 아니면 프로퍼티 기본값 사용
             if (annotation.gameType() != GameType.UNSPECIFIED) {
                 finalGameType = annotation.gameType();  // 사용자가 어노테이션에 지정한 값
             } else {
                 finalGameType = properties.getGameType();  // 프로퍼티 기본값
             }
 
-            // 해당 게임 모듈을 찾아서 실행
+            // 3. 해당 게임 모듈을 가져옴
             GameModule gameModule = gameModuleMap.get(finalGameType.getType());
+
+            // 4. 게임 모듈이 존재하면 실행
             if (gameModule != null) {
                 bodyFortune = gameModule.processGame(request, bodyFortune);
             }
@@ -255,18 +265,21 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * @return 치환할 값
      */
     private String resolvePlaceholderValue(String mappingSpec, HttpServletRequest request) {
+        // 1. mappingSpec이 없거나 비어 있으면 null 리턴
         if (mappingSpec == null || mappingSpec.isBlank()) {
             return null;
         }
 
-        String[] tokens = mappingSpec.split(Constant.REGEX);
+        // 2. mappingSpec의 값을 :로 분리해서 sourceType, sourceKey로 저장
+        String[] tokens = mappingSpec.split(Constant.COLON);
         if (tokens.length != 2) {
-            return null;
+            return null; // 잘못된 형식이면 null 리턴 (e.g. "header:X-User-Name:extra")
         }
 
         String sourceType = tokens[0];  // "header", "session" 등
         String sourceKey = tokens[1];   // "X-User-Name", "USER_NAME"
 
+        // 3. sourceType에 따라 값을 가져오기 (헤더, 세션)
         switch (sourceType) {
             case Constant.HEADER -> {
                 return request.getHeader(sourceKey);

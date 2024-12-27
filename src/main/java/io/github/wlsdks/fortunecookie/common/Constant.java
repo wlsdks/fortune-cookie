@@ -12,7 +12,7 @@ public class Constant {
     // interceptor
     public static final String FORTUNE_BODY = "fortuneBody";
     public static final String GUEST = "Guest";
-    public static final String REGEX = ":";
+    public static final String COLON = ":";
     public static final String HEADER = "header";
     public static final String SESSION = "session";
 
