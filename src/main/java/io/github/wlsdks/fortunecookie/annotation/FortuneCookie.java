@@ -13,13 +13,13 @@ import java.lang.annotation.*;
 @Documented
 public @interface FortuneCookie {
 
-    // 이 메서드에만 다른 gameType을 쓸 수 있도록
+    // 이 메서드에만 다른 gameType을 쓸 수 있도록 설정
     GameType gameType() default GameType.UNSPECIFIED;
 
-    // 게임을 아예 비활성화
+    // 게임을 아예 비활성화 할 수 있도록 설정
     boolean gameEnabled() default true;
 
-    // 다른 모드
+    // 다른 모드를 쓸 수 있도록 설정
     FortuneMode mode() default FortuneMode.UNSPECIFIED;
 
 }
