@@ -1,9 +1,11 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
 import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
+import io.github.wlsdks.fortunecookie.common.Constant;
 import io.github.wlsdks.fortunecookie.dto.FortuneWrapper;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.MethodParameter;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -31,7 +33,6 @@ import java.util.Map;
 @ControllerAdvice
 public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
 
-    public static final String FORTUNE_BODY = "fortuneBody";
     private final FortuneCookieProperties properties;
 
     /**
@@ -49,7 +50,8 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
      * 또한 @FortuneCookie 어노테이션이 적용된 경우에만 처리합니다.
      */
     @Override
-    public boolean supports(MethodParameter returnType, Class<? extends HttpMessageConverter<?>> converterType) {
+    public boolean supports(@NonNull MethodParameter returnType,
+                            @NonNull Class<? extends HttpMessageConverter<?>> converterType) {
         if (!properties.isEnabled() ||
                 !MappingJackson2HttpMessageConverter.class.isAssignableFrom(converterType)) {
             return false;
@@ -61,6 +63,7 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
             return false;
         }
 
+        // 핸들러 메서드가 @FortuneCookie 어노테이션을 가지고 있는지 확인
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
         Object handler = request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE);
 
@@ -68,15 +71,18 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
             return false;
         }
 
+        // 핸들러 메서드에 @FortuneCookie 어노테이션이 있는지 확인
         HandlerMethod handlerMethod = (HandlerMethod) handler;
         FortuneCookie annotation = AnnotationUtils.findAnnotation(
                 handlerMethod.getMethod(), FortuneCookie.class);
 
+        // 메서드에 어노테이션이 없으면 클래스에 있는지 확인
         if (annotation == null) {
             annotation = AnnotationUtils.findAnnotation(
                     handlerMethod.getBeanType(), FortuneCookie.class);
         }
 
+        // 어노테이션이 없으면 처리하지 않음
         return annotation != null;
     }
 
@@ -95,11 +101,11 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
      */
     @Override
     public Object beforeBodyWrite(Object body,
-                                  MethodParameter returnType,
-                                  MediaType selectedContentType,
-                                  Class<? extends HttpMessageConverter<?>> selectedConverterType,
-                                  ServerHttpRequest request,
-                                  ServerHttpResponse response) {
+                                  @NonNull MethodParameter returnType,
+                                  @NonNull MediaType selectedContentType,
+                                  @NonNull Class<? extends HttpMessageConverter<?>> selectedConverterType,
+                                  @NonNull ServerHttpRequest request,
+                                  @NonNull ServerHttpResponse response) {
         // 1. 포춘 쿠키 기능이 꺼져 있으면 처리하지 않음
         if (!properties.isEnabled()) {
             return body;
@@ -112,7 +118,7 @@ public class FortuneCookieResponseAdvice implements ResponseBodyAdvice<Object> {
 
         // 3. Interceptor에서 저장한 바디용 포춘 메시지 읽기
         HttpServletRequest servletRequest = ((ServletServerHttpRequest) request).getServletRequest();
-        String bodyFortune = (String) servletRequest.getAttribute(FORTUNE_BODY);
+        String bodyFortune = (String) servletRequest.getAttribute(Constant.FORTUNE_BODY);
 
         // 4. 바디에 메시지 추가 기능이 꺼져 있거나, fortuneBody가 null인 경우 처리하지 않음
         if (!properties.isIncludeInResponse() || bodyFortune == null) {
