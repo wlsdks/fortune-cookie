@@ -4,6 +4,7 @@ import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieInterceptor;
 import io.github.wlsdks.fortunecookie.interceptor.FortuneCookieResponseAdvice;
 import io.github.wlsdks.fortunecookie.interceptor.module.GameModule;
 import io.github.wlsdks.fortunecookie.interceptor.module.impl.NumberGuessGame;
+import io.github.wlsdks.fortunecookie.interceptor.module.impl.QuizGame;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
 import io.github.wlsdks.fortunecookie.provider.DefaultFortuneProvider;
 import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
@@ -88,8 +89,12 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
                                                              FortuneCookieProperties props) {
         // 게임 모듈 리스트
         List<GameModule> gameModuleList = new ArrayList<>(List.of());
+
         // 숫자 맞추기 게임 추가
         gameModuleList.add(new NumberGuessGame(properties, messageSource(), new Random()));
+        gameModuleList.add(new QuizGame(properties, messageSource(), new Random()));
+
+        // 인터셉터 생성
         return new FortuneCookieInterceptor(fortuneProvider, props, gameModuleList);
     }
 

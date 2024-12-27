@@ -32,18 +32,9 @@ public class QuizGame implements GameModule {
      */
     @Override
     public String processGame(HttpServletRequest request, String currentFortune) {
+        // 세션에서 QUIZ_INDEX 가져오기
         HttpSession session = request.getSession();
-
-        // 문제 인덱스를 저장한다.
-        Object quizIndexObj = session.getAttribute(Constant.QUIZ_INDEX);
-        int quizIndex;
-
-        if (quizIndexObj == null) {
-            quizIndex = random.nextInt(QuizConstant.QUESTIONS.length);
-            session.setAttribute(Constant.QUIZ_INDEX, quizIndex);
-        } else {
-            quizIndex = (int) quizIndexObj;
-        }
+        int quizIndex = getOrCreateQuizIndex(session);
 
         // 사용자가 X-Quiz-Answer 헤더로 답을 보냈는지 체크
         String userAnswer = request.getHeader(Constant.X_QUIZ_ANSWER);
@@ -57,8 +48,7 @@ public class QuizGame implements GameModule {
                         new Object[]{QuizConstant.ANSWERS[quizIndex]},
                         request.getLocale()
                 );
-
-                // 다음 라운드 문제를 위해 새로운 인덱스 생성
+                // 새로운 문제를 위해 인덱스 갱신
                 int newIndex = random.nextInt(QuizConstant.QUESTIONS.length);
                 session.setAttribute(Constant.QUIZ_INDEX, newIndex);
             }
@@ -75,8 +65,17 @@ public class QuizGame implements GameModule {
 
         // 사용자가 답을 보내지 않았을 경우
         if (userAnswerNotExist(userAnswer)) {
-            // 헤더가 없으면 현재 문제 출력
-            currentFortune += " [Quiz] " + QuizConstant.QUESTIONS[quizIndex];
+            // 퀴즈 문제 출력
+            String quizDisplay = messageSource.getMessage(
+                    "game.quiz.display",
+                    new Object[]{QuizConstant.QUESTIONS[quizIndex]},
+                    request.getLocale()
+            );
+
+            // 현재 포춘에 퀴즈 문제 추가
+            currentFortune += " " + quizDisplay;
+
+            // 퀴즈 답안 요청 메시지
             currentFortune += " " + messageSource.getMessage(
                     "game.quiz_prompt",
                     null,
@@ -86,6 +85,24 @@ public class QuizGame implements GameModule {
 
         // 최종 포춘 반환
         return currentFortune;
+    }
+
+    /**
+     * 현재 세션에 저장된 QUIZ_INDEX가 없으면 새로 만들고, 있으면 그 값을 사용합니다.
+     */
+    private int getOrCreateQuizIndex(HttpSession session) {
+        // 1. 세션에서 QUIZ_INDEX 가져오기
+        Object quizIndexObj = session.getAttribute(Constant.QUIZ_INDEX);
+
+        // 2. 세션에 저장된 QUIZ_INDEX가 없으면 새로 만들기
+        if (quizIndexObj == null) {
+            int newIndex = random.nextInt(QuizConstant.QUESTIONS.length);
+            session.setAttribute(Constant.QUIZ_INDEX, newIndex);
+            return newIndex;
+        }
+
+        // 3. 세션에 저장된 QUIZ_INDEX가 있으면 그 값을 사용
+        return (int) quizIndexObj;
     }
 
     private boolean userAnswerExist(String userAnswer) {
