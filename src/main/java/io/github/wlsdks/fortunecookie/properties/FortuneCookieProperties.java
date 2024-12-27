@@ -56,8 +56,9 @@ public class FortuneCookieProperties {
     // 플레이스홀더 매핑 정보 (예: userName: "header:X-User-Name")
     private Map<String, String> placeholderMapping = new HashMap<>();
 
+    // todo: 설정할때 소문자로 하면 대문자로 어떻게 받을지 컨버터를 써야할듯?
     // 모드: fortune(기본), joke, quote 등: 이 값에 따라 다른 메시지 세트나 로직을 적용할 수 있음
-    private String mode = "fortune";
+    private FortuneMode mode = FortuneMode.FORTUNE;
 
     // 미니 게임 기능 활성화 여부 (true일 경우 숫자 맞히기 등 미니 게임 기능 활성)
     private boolean gameEnabled = false;
@@ -65,6 +66,7 @@ public class FortuneCookieProperties {
     // 미니 게임에서 사용할 숫자 범위 (1 ~ gameRange 사이의 숫자를 맞히도록)
     private int gameRange = 10;
 
+    // todo: 설정할때 소문자로 하면 대문자로 어떻게 받을지 컨버터를 써야할듯?
     // 미니 게임 타입 (NUMBER: 숫자 맞히기, QUIZ: 퀴즈)
     private GameType gameType = GameType.NUMBER;
 
