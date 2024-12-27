@@ -1,6 +1,7 @@
 package io.github.wlsdks.fortunecookie.interceptor;
 
 import io.github.wlsdks.fortunecookie.annotation.FortuneCookie;
+import io.github.wlsdks.fortunecookie.common.Constant;
 import io.github.wlsdks.fortunecookie.interceptor.module.GameModule;
 import io.github.wlsdks.fortunecookie.interceptor.module.impl.NumberGuessGame;
 import io.github.wlsdks.fortunecookie.interceptor.module.impl.QuizGame;
@@ -10,6 +11,7 @@ import io.github.wlsdks.fortunecookie.provider.FortuneProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.core.annotation.AnnotationUtils;
@@ -17,10 +19,7 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답 헤더에 추가하는 인터셉터입니다.
@@ -30,16 +29,13 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
 
     private final FortuneProvider fortuneProvider;
     private final FortuneCookieProperties properties;
-    private final MessageSource messageSource;
     private final Map<String, GameModule> gameModuleMap;
 
     public FortuneCookieInterceptor(FortuneProvider fortuneProvider,
                                     FortuneCookieProperties properties,
-                                    MessageSource messageSource,
                                     List<GameModule> gameModuleList) {
         this.fortuneProvider = fortuneProvider;
         this.properties = properties;
-        this.messageSource = messageSource;
         this.gameModuleMap = new HashMap<>();
 
         // 게임 모듈을 맵에 넣어둠
@@ -60,18 +56,21 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * - 바디는 요청 로케일에 맞춤
      */
     @Override
-    public boolean preHandle(HttpServletRequest request,
-                             HttpServletResponse response,
-                             Object handler) throws Exception {
+    public boolean preHandle(@NonNull HttpServletRequest request,
+                             @NonNull HttpServletResponse response,
+                             @NonNull Object handler) throws Exception {
         // 1. 어노테이션이 없으면 인터셉터 비활성화
         if (hasFortuneCookieAnnotation(handler)) return true;
+
         // 2. 기능이 꺼져 있으면 인터셉터 비활성화
         if (!properties.isEnabled()) return true;
 
         // 3. 무작위 포춘 메시지 키 생성 (mode에 따른 키 선택은 FortuneProvider 내부 로직에 반영됨)
         String fortuneKey = fortuneProvider.generateFortuneKey();
+
         // 4. 헤더용 메시지 기존 로케일과 무관하게 항상 영어로 표시한다. (한국어를 사용하면 에러가 발생할 수 있음)
         String headerFortune = fortuneProvider.getFortune(fortuneKey, Locale.ENGLISH);
+
         // 5. 바디용 메시지 Request Locale로 포춘 메시지 생성
         String bodyFortune = fortuneProvider.getFortune(fortuneKey, request.getLocale());
 
@@ -97,7 +96,7 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         }
 
         // 9. 최종 바디 메시지를 request.setAttribute("fortuneBody", bodyFortune)로 저장(나중에 ResponseBodyAdvice가 꺼내 씀
-        request.setAttribute("fortuneBody", bodyFortune);
+        request.setAttribute(Constant.FORTUNE_BODY, bodyFortune);
 
         // 10. 다음 인터셉터로 요청 전달 (컨트롤러 계속 진행)
         return true;
@@ -132,9 +131,9 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * - 현재 필요 없음
      */
     @Override
-    public void postHandle(HttpServletRequest request,
-                           HttpServletResponse response,
-                           Object handler,
+    public void postHandle(@NonNull HttpServletRequest request,
+                           @NonNull HttpServletResponse response,
+                           @NonNull Object handler,
                            ModelAndView modelAndView) throws Exception {
         // 헤더 설정은 preHandle에서 이미 했으므로 별도 작업 없음
     }
@@ -144,9 +143,9 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
      * - 응답이 이미 커밋된 상태일 수 있어서 헤더 추가가 무효화될 확률이 큼
      */
     @Override
-    public void afterCompletion(HttpServletRequest request,
-                                HttpServletResponse response,
-                                Object handler,
+    public void afterCompletion(@NonNull HttpServletRequest request,
+                                @NonNull HttpServletResponse response,
+                                @NonNull Object handler,
                                 Exception ex) throws Exception {
         // 헤더 설정은 preHandle에서 이미 했으므로 별도 작업 없음
     }
@@ -175,13 +174,8 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
             // mappingSpec을 파싱해서 값을 가져옴
             String resolvedValue = resolvePlaceholderValue(mappingSpec, request);
 
-            // 치환
-            if (resolvedValue != null) {
-                result = result.replace(placeholderPattern, resolvedValue);
-            } else {
-                // 못 찾았으면 "Guest" 등 기본값 혹은 그대로 둠
-                result = result.replace(placeholderPattern, "Guest");
-            }
+            // 못 찾았으면 "Guest" 등 기본값 혹은 그대로 둠
+            result = result.replace(placeholderPattern, Objects.requireNonNullElse(resolvedValue, Constant.GUEST));
         }
 
         return result;
@@ -198,7 +192,7 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         }
 
         // 예: "header:X-User-Name"
-        String[] tokens = mappingSpec.split(":");
+        String[] tokens = mappingSpec.split(Constant.REGEX);
         if (tokens.length != 2) {
             return null;
         }
@@ -207,17 +201,22 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
         String sourceKey = tokens[1];   // "X-User-Name", "USER_NAME"
 
         switch (sourceType) {
-            case "header":
+            // 헤더에서 가져오기
+            case Constant.HEADER -> {
                 return request.getHeader(sourceKey);
-            case "session":
+            }
+            // 세션에서 가져오기
+            case Constant.SESSION -> {
                 HttpSession session = request.getSession(false);
                 if (session != null) {
                     Object val = session.getAttribute(sourceKey);
                     return val != null ? val.toString() : null;
                 }
                 return null;
-            default:
+            }
+            default -> {
                 return null;
+            }
         }
     }
 

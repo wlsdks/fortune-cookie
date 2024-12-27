@@ -1,6 +1,8 @@
 package io.github.wlsdks.fortunecookie.provider;
 
+import io.github.wlsdks.fortunecookie.common.Constant;
 import io.github.wlsdks.fortunecookie.properties.FortuneCookieProperties;
+import io.github.wlsdks.fortunecookie.properties.FortuneMode;
 import org.springframework.context.MessageSource;
 
 import java.time.DayOfWeek;
@@ -18,8 +20,6 @@ public class DefaultFortuneProvider implements FortuneProvider {
     private final FortuneCookieProperties properties;
     private final Random random;
 
-    private static final String MESSAGE_PREFIX = "fortune"; // 메시지 프로퍼티 접두어
-
     public DefaultFortuneProvider(MessageSource messageSource, FortuneCookieProperties properties) {
         this.messageSource = messageSource;
         this.properties = properties;
@@ -32,17 +32,16 @@ public class DefaultFortuneProvider implements FortuneProvider {
      * @return 생성된 포춘 메시지 키 (예: "fortune.joke.1", "fortune.joke.2" 등)
      */
     public String generateFortuneKey() {
-        // mode에 따라 prefix 결정
-        // fortune(기본) -> fortune.*
-        // joke 모드 -> fortune.joke.*
-        // quote 모드 -> fortune.quote.*
-        String mode = properties.getMode();
-        String prefix = "fortune";
+        // 기본값 가져오기
+        FortuneMode fortuneMode = properties.getMode();
+        String prefix = Constant.MESSAGE_PREFIX; // 기본 prefix (fortune)
 
-        if ("joke".equalsIgnoreCase(mode)) {
-            prefix = "fortune.joke";
-        } else if ("quote".equalsIgnoreCase(mode)) {
-            prefix = "fortune.quote";
+        // mode에 따라 prefix 변경
+        if (FortuneMode.JOKE.equals(fortuneMode)) {
+            prefix = Constant.JOKE_MESSAGE;
+        }
+        if (FortuneMode.QUOTE.equals(fortuneMode)) {
+            prefix = Constant.QUOTE_MESSAGE;
         }
 
         // 0.0 <= roll < 1.0 범위의 랜덤한 double 값 생성
@@ -50,17 +49,16 @@ public class DefaultFortuneProvider implements FortuneProvider {
 
         // 1% 확률로 특별한 메시지 반환 (해당 모드에 맞춘 special 키 사용)
         if (roll < 0.01) {
-            return MESSAGE_PREFIX + ".special";
+            return Constant.SPECIAL_MESSAGE;
         }
 
-        // 일자별로 다른 메시지 반환 (이 부분은 mode와 상관없이 특정 키 사용)
-        // 만약 모드별 월요일/금요일 메시지를 다르게 하고 싶다면 prefix + ".monday" 식으로도 가능
+        // 특수한 일자에는 다른 메시지 반환 (이 부분은 mode와 상관없이 특정 키 사용)
         DayOfWeek dayOfWeek = LocalDate.now().getDayOfWeek();
         if (dayOfWeek == DayOfWeek.MONDAY) {
-            return MESSAGE_PREFIX + ".monday";
+            return Constant.MONDAY_MESSAGE;
         }
         if (dayOfWeek == DayOfWeek.FRIDAY) {
-            return MESSAGE_PREFIX + ".friday";
+            return Constant.FRIDAY_MESSAGE;
         }
 
         // 일반 포춘: 1 ~ fortunesCount 범위 내에서 랜덤하게 선택
@@ -77,12 +75,16 @@ public class DefaultFortuneProvider implements FortuneProvider {
      */
     @Override
     public String getFortune(String fortuneKey, Locale locale) {
+        // 메시지 프로퍼티에서 포춘 메시지 가져오기
         String message = messageSource.getMessage(fortuneKey, null, locale);
+
+        // 만약 메시지가 null이거나 비어있으면 기본 메시지로 대체
         if (message.equals(fortuneKey)) {
-            // 키가 존재하지 않으면 기본 메시지 반환
             return messageSource.getMessage(getDefaultKeyForCurrentMode(), null,
                     "오늘은 농담이 없습니다. X-Guess 헤더를 사용하여 1에서 20 사이의 숫자를 추측하세요!", locale);
         }
+
+        // 포춘 메시지 반환
         return message;
     }
 
@@ -91,16 +93,18 @@ public class DefaultFortuneProvider implements FortuneProvider {
      * 현재 mode에 맞는 default 키를 반환하는 헬퍼 메서드
      */
     private String getDefaultKeyForCurrentMode() {
-        String mode = properties.getMode();
+        FortuneMode fortuneMode = properties.getMode();
 
         // mode에 따라 다른 default 키를 반환
-        if ("joke".equalsIgnoreCase(mode)) {
+        if (FortuneMode.JOKE.equals(fortuneMode)) {
             return "fortune.joke.default";
-        } else if ("quote".equalsIgnoreCase(mode)) {
+        }
+        if (FortuneMode.QUOTE.equals(fortuneMode)) {
             return "fortune.quote.default";
         }
 
-        return "fortune.default"; // 기본 fortune 모드
+        // 기본값 반환
+        return "fortune.default";
     }
 
 }
