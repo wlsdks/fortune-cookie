@@ -15,6 +15,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.support.ResourceBundleMessageSource;
+import org.springframework.core.Ordered;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -101,11 +102,13 @@ public class FortuneCookieAutoConfiguration implements WebMvcConfigurer {
     /**
      * 인터셉터를 글로벌하게 추가합니다.
      * 모든 URL을 대상으로 Interceptor가 실행되며, 내부 로직에서 실제로 @FortuneCookie가 붙은 곳만 포춘 메시지를 삽입합니다.
+     * 참고사항: order를 높은 값으로 설정하여 시큐리티 필터 이후에 실행되도록 함
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(fortuneCookieInterceptor(fortuneProvider(messageSource()), properties))
-                .addPathPatterns("/**");
+                .addPathPatterns("/**")
+                .order(Ordered.LOWEST_PRECEDENCE - 10); // 낮은 우선순위로 설정 (나중에 실행되도록)
     }
 
 }
