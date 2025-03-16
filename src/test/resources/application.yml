@@ -1,0 +1,19 @@
+fortune-cookie:
+  enabled: true
+  include-header: true
+  header-name: X-Fortune-Cookie
+  include-in-response: true
+  response-fortune-name: fortune
+  placeholder-enabled: true
+  placeholder-mapping:
+    userName: "header:X-User-Name"
+    userRoles: "header:X-User-Roles"
+  mode: fortune
+  game-enabled: false
+
+spring:
+  security:
+    user:
+      name: testUser
+      password: password
+      roles: USER,ADMIN
