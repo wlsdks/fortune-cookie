@@ -301,20 +301,28 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
             }
             // 스프링 시큐리티를 사용하는 경우
             case SECURITY -> {
-                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-                if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
-                    if (USERNAME.equals(sourceKey)) {
-                        return auth.getName();
+                try {
+                    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                    if (isAuthenticatedUser(auth)) {
+                        // 유저 정보를 가져오는 경우
+                        if (USERNAME.equals(sourceKey)) {
+                            return auth.getName();
+                        }
+                        // 유저 역할을 가져오는 경우
+                        if (ROLES.equals(sourceKey)) {
+                            return auth.getAuthorities().stream()
+                                    .map(GrantedAuthority::getAuthority)
+                                    .collect(Collectors.joining(","));
+                        }
+                        // 유저 principal을 가져오는 경우
+                        if (PRINCIPAL.equals(sourceKey)) {
+                            Object principal = auth.getPrincipal();
+                            return principal != null ? principal.toString() : null;
+                        }
                     }
-                    if (ROLES.equals(sourceKey)) {
-                        return auth.getAuthorities().stream()
-                                .map(GrantedAuthority::getAuthority)
-                                .collect(Collectors.joining(","));
-                    }
-                    if (PRINCIPAL.equals(sourceKey)) {
-                        Object principal = auth.getPrincipal();
-                        return principal != null ? principal.toString() : null;
-                    }
+                } catch (Exception e) {
+                    log.debug("Failed to access security context: {}", e.getMessage());
+                    return null;
                 }
                 return null;
             }
@@ -322,6 +330,17 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                 return null;
             }
         }
+    }
+
+    /**
+     * 사용자가 인증되었는지 확인하는 메서드
+     *
+     * @param auth : 현재 사용자 인증 정보
+     * @return : 인증 여부
+     */
+    private boolean isAuthenticatedUser(Authentication auth) {
+        return auth != null && auth.isAuthenticated()
+                && !(auth instanceof AnonymousAuthenticationToken);
     }
 
 }
