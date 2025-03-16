@@ -8,7 +8,7 @@ plugins {
 }
 
 group = 'io.github.wlsdks'
-version = '0.5.0'
+version = '0.5.0-DEV'
 sourceCompatibility = '21'
 archivesBaseName = 'fortune-cookie' // JAR 파일 이름 설정
 
@@ -34,7 +34,7 @@ tasks.withType(Javadoc) {
 
 repositories {
     mavenCentral()
-//    mavenLocal()  // 로컬 Maven 저장소 우선
+    mavenLocal()  // 로컬 Maven 저장소 우선
 }
 
 dependencies {
@@ -44,6 +44,10 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.16'
     compileOnly 'org.springframework:spring-webmvc'
     compileOnly 'com.fasterxml.jackson.core:jackson-databind'
+
+    // Spring Security (옵션)
+    compileOnly 'org.springframework.security:spring-security-web'
+    compileOnly 'org.springframework.security:spring-security-config'
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -59,6 +63,11 @@ dependencies {
     testImplementation 'org.mockito:mockito-core'
     testImplementation 'org.mockito:mockito-junit-jupiter'
     testImplementation 'jakarta.servlet:jakarta.servlet-api:6.1.0'
+
+    // 테스트용 Spring Security
+    testImplementation 'org.springframework.security:spring-security-web'
+    testImplementation 'org.springframework.security:spring-security-config'
+    testImplementation 'org.springframework.security:spring-security-test'
 }
 
 test {
@@ -66,7 +75,7 @@ test {
 }
 
 // Maven Central 배포 설정
-mavenPublishing {
+/*mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)         // Maven Central 배포
     signAllPublications()                                      // PGP 서명 사용
     coordinates("io.github.wlsdks", "fortune-cookie", "0.5.0") // 새로운 Artifact ID로 설정
@@ -98,10 +107,9 @@ mavenPublishing {
             developerConnection = "scm:git:ssh://github.com/wlsdks/fortune-cookie.git"
         }
     }
-}
+}*/
 
 // 로컬 Maven 배포를 위한 설정
-/*
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -138,4 +146,3 @@ publishing {
         mavenLocal()
     }
 }
-*/

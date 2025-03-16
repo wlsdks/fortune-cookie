@@ -15,11 +15,18 @@ import jakarta.servlet.http.HttpSession;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static io.github.wlsdks.fortunecookie.common.Constant.*;
 
 /**
  * 포춘 쿠키 메시지를 HTTP 응답 헤더에 추가하는 인터셉터입니다.
@@ -289,6 +296,25 @@ public class FortuneCookieInterceptor implements HandlerInterceptor {
                 if (session != null) {
                     Object val = session.getAttribute(sourceKey);
                     return val != null ? val.toString() : null;
+                }
+                return null;
+            }
+            // 스프링 시큐리티를 사용하는 경우
+            case SECURITY -> {
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)) {
+                    if (USERNAME.equals(sourceKey)) {
+                        return auth.getName();
+                    }
+                    if (ROLES.equals(sourceKey)) {
+                        return auth.getAuthorities().stream()
+                                .map(GrantedAuthority::getAuthority)
+                                .collect(Collectors.joining(","));
+                    }
+                    if (PRINCIPAL.equals(sourceKey)) {
+                        Object principal = auth.getPrincipal();
+                        return principal != null ? principal.toString() : null;
+                    }
                 }
                 return null;
             }

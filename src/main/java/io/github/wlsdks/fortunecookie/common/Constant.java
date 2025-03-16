@@ -22,4 +22,10 @@ public class Constant {
     public static final String X_QUIZ_ANSWER = "X-Quiz-Answer";
     public static final String QUIZ_INDEX = "quizIndex";
 
+    // security
+    public static final String SECURITY = "security";
+    public static final String USERNAME = "username";
+    public static final String ROLES = "roles";
+    public static final String PRINCIPAL = "principal";
+
 }
