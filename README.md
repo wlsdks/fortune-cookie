@@ -426,6 +426,22 @@ public class DatabaseFortuneProvider implements FortuneProvider {
 
 - `@ConditionalOnMissingBean(FortuneProvider.class)` 덕분에 새 Provider가 등록되면 `DefaultFortuneProvider` 대신 사용됩니다.
 
+## Spring Security 통합
+
+Fortune Cookie는 Spring Security가 적용된 환경에서도 원활하게 동작합니다.
+
+### 보안 관련 플레이스홀더
+
+Spring Security의 인증 정보를 포춘 메시지의 플레이스홀더로 활용할 수 있습니다:
+
+```yaml
+fortune-cookie:
+  placeholder-enabled: true
+  placeholder-mapping:
+    userName: "security:username"
+    userRoles: "security:roles"
+```
+
 ---
 
 ## 📄 라이선스
